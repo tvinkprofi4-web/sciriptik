@@ -2307,6 +2307,7 @@ local function setupAim()
 	local AIM = {
 		GamePassId = 0,
 		AimMode = "Override",
+		DeviceMode = "Auto",
 		AimPart = "Head",
 		FOV = 160,
 		Smoothness = 0.85,
@@ -2362,12 +2363,29 @@ local function setupAim()
 	local enabled = false
 	local holding = false
 	local hasPass = (AIM.GamePassId == 0)
-	local isMobile = UserInputService.TouchEnabled
+	local isMobile = UserInputService.TouchEnabled 
+		or UserInputService.AccelerometerEnabled 
+		or UserInputService.GyroscopeEnabled 
+		or (playerGui:FindFirstChild("TouchGui") ~= nil)
+
 	pcall(function()
-		UserInputService.TouchStarted:Connect(function()
-			isMobile = true
+		playerGui.ChildAdded:Connect(function(child)
+			if child.Name == "TouchGui" then
+				isMobile = true
+			end
+		end)
+		UserInputService.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch then
+				isMobile = true
+			end
 		end)
 	end)
+
+	local function checkIsMobile()
+		if AIM.DeviceMode == "Mobile" then return true end
+		if AIM.DeviceMode == "PC" then return false end
+		return isMobile
+	end
 
 	local COLORS = {
 		bg = Color3.fromRGB(14, 8, 20),
@@ -2420,6 +2438,7 @@ local function setupAim()
 	local circle = Instance.new("Frame")
 	circle.Name = "FOVCircle"
 	circle.AnchorPoint = Vector2.new(0.5, 0.5)
+	circle.Position = UDim2.fromScale(0.5, 0.5)
 	circle.BackgroundTransparency = 1
 	circle.Parent = hud
 	Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
@@ -2476,7 +2495,7 @@ local function setupAim()
 	local onSettingsChanged = function() end
 
 	local function updateUI()
-		local suffix = isMobile and "" or (" (" .. keyName(AIM.ToggleKey) .. ")")
+		local suffix = checkIsMobile() and "" or (" (" .. keyName(AIM.ToggleKey) .. ")")
 		if not hasPass then
 			toggleBtn.Text = tr("AIM: BUY")
 			toggleBtn.BackgroundColor3 = COLORS.gold
@@ -2510,7 +2529,12 @@ local function setupAim()
 		updateUI()
 	end
 
-	toggleBtn.Activated:Connect(toggleAim)
+	toggleBtn.Activated:Connect(function(input)
+		if input and input.UserInputType == Enum.UserInputType.Touch then
+			isMobile = true
+		end
+		toggleAim()
+	end)
 
 	local speedInfo = Instance.new("TextLabel")
 	speedInfo.Name = "SpeedInfo"
@@ -2617,6 +2641,7 @@ local function setupAim()
 
 	local CHOICES = {
 		AimMode = { Override = true, Classic = true },
+		DeviceMode = { Auto = true, Mobile = true, PC = true },
 		AimPart = { Head = true, UpperTorso = true, HumanoidRootPart = true },
 		AutoShoot = { Phone = true, All = true, Off = true },
 		TeamMode = { Auto = true, Off = true },
@@ -3607,7 +3632,7 @@ local function setupAim()
 
 	local function isVisible(cam, part, targetChar)
 		if not AIM.WallCheck then return true end
-		if holding and AIM.HoldThroughWalls and not isMobile then return true end
+		if holding and AIM.HoldThroughWalls and not checkIsMobile() then return true end
 		local origin = cam.CFrame.Position
 		local dir = part.Position - origin
 		local ignore = { targetChar, player.Character, cam }
@@ -3631,6 +3656,12 @@ local function setupAim()
 	end
 
 	local VISIBLE_PARTS = { "Head", "UpperTorso", "Torso", "HumanoidRootPart" }
+
+	local function getFovScale(cam)
+		local vsY = cam.ViewportSize.Y
+		local guiY = (hud and hud.AbsoluteSize.Y > 0) and hud.AbsoluteSize.Y or vsY
+		return vsY / math.max(guiY, 1)
+	end
 
 	local function checkTarget(cam, t, center, maxDist)
 		local char = t.char
@@ -3672,10 +3703,13 @@ local function setupAim()
 	local MIN_GRACE = 0.2
 
 	local function getClosestTarget(cam, targets, current)
-		local center = getAimCenter(cam)
+		local vs = cam.ViewportSize
+		local center = Vector2.new(vs.X / 2, vs.Y / 2)
+		local fovScale = getFovScale(cam)
+		local maxFov = AIM.FOV * fovScale
 
 		if current and AIM.StickyTarget then
-			local part = checkTarget(cam, current, center, AIM.FOV * KEEP_RADIUS)
+			local part = checkTarget(cam, current, center, maxFov * KEEP_RADIUS)
 			if part then
 				lockSeenAt = os.clock()
 				return part, current
@@ -3690,7 +3724,7 @@ local function setupAim()
 			end
 		end
 
-		local bestPart, bestTarget, bestDist = nil, nil, AIM.FOV
+		local bestPart, bestTarget, bestDist = nil, nil, maxFov
 		for _, t in ipairs(targets) do
 			local part, dist = checkTarget(cam, t, center, bestDist)
 			if part then
@@ -3706,7 +3740,7 @@ local function setupAim()
 
 	local function wantsAim()
 		if not (hasPass and enabled) or menuVisible then return false end
-		if isMobile then
+		if checkIsMobile() then
 			return aliveHumanoid(player.Character) ~= nil
 		end
 		if AIM.HoldToAim and not holding then return false end
@@ -3812,7 +3846,11 @@ local function setupAim()
 			return diagnoseText
 		end
 		diagnoseAt = os.clock()
-		local center = getAimCenter(cam)
+		local vs = cam.ViewportSize
+		local center = Vector2.new(vs.X / 2, vs.Y / 2)
+		local fovScale = getFovScale(cam)
+		local maxFov = AIM.FOV * fovScale
+
 		local mates, outside, walls, shields = 0, 0, 0, 0
 		for _, t in ipairs(targets) do
 			local char = t.char
@@ -3825,7 +3863,7 @@ local function setupAim()
 					local part = getAimPart(char)
 					if part then
 						local sp, onScreen = cam:WorldToViewportPoint(part.Position)
-						if not onScreen or (Vector2.new(sp.X, sp.Y) - center).Magnitude >= AIM.FOV then
+						if not onScreen or (Vector2.new(sp.X, sp.Y) - center).Magnitude >= maxFov then
 							outside += 1
 						elseif not isVisible(cam, part, char) then
 							walls += 1
@@ -3862,8 +3900,7 @@ local function setupAim()
 		updateESP(cam, targets)
 
 		if circle.Visible then
-			local c = getAimCenter(cam)
-			circle.Position = UDim2.fromOffset(c.X, c.Y)
+			circle.Position = UDim2.fromScale(0.5, 0.5)
 		end
 
 		local prevTarget = lockedTarget
@@ -3875,7 +3912,7 @@ local function setupAim()
 			prevWant, prevChar = nil, nil
 		end
 		player:SetAttribute("AimPoint", lockedPart and aimPosition(lockedPart) or nil)
-		freezeMouse(lockedPart ~= nil and AIM.FreezeMouse and not isMobile)
+		freezeMouse(lockedPart ~= nil and AIM.FreezeMouse and not checkIsMobile())
 
 		if lockedTarget and AIM.ShowTargetInfo then
 			local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -3884,6 +3921,10 @@ local function setupAim()
 			local weaponInfo = enemyWeapon and (" [" .. enemyWeapon.Name .. "]") or ""
 			targetInfo.Text = trf("?? %s%s  �  %d m", lockedTarget.name, weaponInfo, d)
 			targetInfo.TextColor3 = COLORS.enemy
+			targetInfo.Visible = true
+		elseif AIM.ShowTargetInfo and wantsAim() then
+			targetInfo.Text = diagnose(cam, targets)
+			targetInfo.TextColor3 = Color3.fromRGB(200, 200, 210)
 			targetInfo.Visible = true
 		else
 			targetInfo.Visible = false
@@ -4009,7 +4050,7 @@ local function setupAim()
 
 	local function autoShootAllowed()
 		if AIM.AutoShoot == "All" then return true end
-		if AIM.AutoShoot == "Phone" then return isMobile end
+		if AIM.AutoShoot == "Phone" then return checkIsMobile() end
 		return false
 	end
 
