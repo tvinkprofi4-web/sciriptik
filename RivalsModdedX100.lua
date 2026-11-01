@@ -2529,10 +2529,8 @@ local function setupAim()
 		updateUI()
 	end
 
-	toggleBtn.Activated:Connect(function(input)
-		if input and input.UserInputType == Enum.UserInputType.Touch then
-			isMobile = true
-		end
+	toggleBtn.Activated:Connect(function()
+		isMobile = true
 		toggleAim()
 	end)
 
@@ -3632,10 +3630,16 @@ local function setupAim()
 
 	local function isVisible(cam, part, targetChar)
 		if not AIM.WallCheck then return true end
-		if holding and AIM.HoldThroughWalls and not checkIsMobile() then return true end
+		if (holding or checkIsMobile()) and AIM.HoldThroughWalls then return true end
 		local origin = cam.CFrame.Position
 		local dir = part.Position - origin
 		local ignore = { targetChar, player.Character, cam }
+
+		for _, child in ipairs(workspace:GetChildren()) do
+			if child:IsA("Model") and (string.find(string.lower(child.Name), "view") or string.find(string.lower(child.Name), "arm")) then
+				table.insert(ignore, child)
+			end
+		end
 
 		for _ = 1, 10 do
 			rayParams.FilterDescendantsInstances = ignore
@@ -3646,7 +3650,19 @@ local function setupAim()
 			local hit = result.Instance
 			local model = hit:FindFirstAncestorOfClass("Model")
 			local isCharacter = model and model:FindFirstChildOfClass("Humanoid")
-			if hit.Transparency > 0.6 or not hit.CanCollide or isCharacter then
+			local hitName = string.lower(hit.Name)
+			local penetrable = hit.Transparency > 0.35 
+				or not hit.CanCollide 
+				or isCharacter 
+				or string.find(hitName, "fence") 
+				or string.find(hitName, "grate") 
+				or string.find(hitName, "glass") 
+				or string.find(hitName, "leaf") 
+				or string.find(hitName, "bush") 
+				or string.find(hitName, "barrier")
+				or string.find(hitName, "border")
+				or string.find(hitName, "spawn")
+			if penetrable then
 				table.insert(ignore, isCharacter and model or hit)
 			else
 				return false
@@ -3922,11 +3938,8 @@ local function setupAim()
 			targetInfo.Text = trf("?? %s%s  �  %d m", lockedTarget.name, weaponInfo, d)
 			targetInfo.TextColor3 = COLORS.enemy
 			targetInfo.Visible = true
-		elseif AIM.ShowTargetInfo and wantsAim() then
-			targetInfo.Text = diagnose(cam, targets)
-			targetInfo.TextColor3 = Color3.fromRGB(200, 200, 210)
-			targetInfo.Visible = true
 		else
+			-- Completely hidden when no locked target: clean screen, no debug banners!
 			targetInfo.Visible = false
 		end
 
