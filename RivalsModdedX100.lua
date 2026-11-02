@@ -3955,27 +3955,45 @@ local function setupAim()
 		end
 	end)
 
-	-- Упрощенный мобильный аим (железобетонный)
-	local myCamera = workspace.CurrentCamera
-	local mobileAimEnabled = false
-	local lockedEnemy = nil
-
-	-- Отключаем стандартную проверку геймпасса, чтобы не мешала
+	-- Упрощенный мобильный аим (железобетонный v2)
 	hasPass = true 
 
 	RunService.RenderStepped:Connect(function()
 		if not hasPass or not enabled then return end
 		if not isMobileDevice() then return end
-		myCamera = workspace.CurrentCamera or myCamera
-		if not myCamera then return end
+		if not workspace.CurrentCamera then return end
 		
-		-- Ищем ближайшего врага
+		-- 1. Проверка: жив ли ты сам (чтобы не аимиться после смерти)
+		local myChar = player.Character
+		local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+		if not myHum or myHum.Health <= 0 then return end
+		
+		local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+		if not myRoot then return end
+
+		-- 2. Ищем ближайшего врага
 		local closest = nil
 		local shortestDist = math.huge
-		local myChar = player.Character
-		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-		
-		if not myRoot then return end
+		local myCamPos = workspace.CurrentCamera.CFrame.Position
+
+		-- Функция для проверки, является ли игрок тиммейтом (работает и с Team, и с атрибутами)
+		local function isTeammate(other)
+			if not other or other == player then return false end
+			if not AIM.TeamCheck then return false end
+			-- Стандартный Team
+			if other.Team and player.Team and other.Team == player.Team then return true end
+			-- Атрибуты (Rivals часто использует их)
+			local myTeamAttr = player:GetAttribute("Team") or player:GetAttribute("TeamId")
+			local otherTeamAttr = other:GetAttribute("Team") or other:GetAttribute("TeamId")
+			if myTeamAttr and otherTeamAttr and myTeamAttr == otherTeamAttr then return true end
+			-- Если у них одинаковый цвет команды (но не белый/нейтральный)
+			if other.TeamColor and player.TeamColor and other.TeamColor == player.TeamColor then
+				if player.TeamColor ~= BrickColor.new("Medium stone grey") and player.TeamColor ~= BrickColor.new("White") then
+					return true
+				end
+			end
+			return false
+		end
 
 		for _, other in ipairs(Players:GetPlayers()) do
 			if other ~= player and other.Character then
@@ -3983,47 +4001,38 @@ local function setupAim()
 				local enemyHead = other.Character:FindFirstChild("Head")
 				
 				if enemyHum and enemyHum.Health > 0 and enemyHead then
-					-- Проверка на тиммейтов (если включена)
-					local isTeammate = false
-					if AIM.TeamCheck and other.Team and player.Team and other.Team == player.Team then
-						isTeammate = true
-					end
-					
-					if not isTeammate then
-						local dist = (enemyHead.Position - myCamera.CFrame.Position).Magnitude
-						if dist < shortestDist and dist < 500 then -- Радиус поиска 500 студов
-							shortestDist = dist
-							closest = enemyHead
+					-- Проверка на тиммейтов
+					if not isTeammate(other) then
+						local dist = (enemyHead.Position - myCamPos).Magnitude
+						if dist < shortestDist and dist < 500 then
+							-- Проверка стен (если включена)
+							local canSee = true
+							if AIM.WallCheck then
+								local rayParams = RaycastParams.new()
+								rayParams.FilterDescendantsInstances = {myChar, other.Character}
+								rayParams.FilterType = Enum.RaycastFilterType.Exclude
+								local result = workspace:Raycast(myCamPos, (enemyHead.Position - myCamPos), rayParams)
+								if result then canSee = false end
+							end
+							
+							if canSee then
+								shortestDist = dist
+								closest = enemyHead
+							end
 						end
 					end
 				end
 			end
 		end
 
-		-- Если нашли цель — поворачиваем камеру
+		-- 3. Поворот камеры и автострел
 		if closest then
-			-- Игнорируем стены, если WallCheck выключен (для мобилки лучше выключить, чтобы работало)
-			-- Но если хочешь проверку стен, используй Raycast (ниже)
-			local canSee = true
-			if AIM.WallCheck then
-				local rayParams = RaycastParams.new()
-				rayParams.FilterDescendantsInstances = {myChar, closest.Parent}
-				rayParams.FilterType = Enum.RaycastFilterType.Exclude
-				local result = workspace:Raycast(myCamera.CFrame.Position, (closest.Position - myCamera.CFrame.Position), rayParams)
-				if result then canSee = false end
-			end
-
-			if canSee then
-				-- Мгновенный поворот камеры
-				myCamera.CFrame = CFrame.lookAt(myCamera.CFrame.Position, closest.Position)
-				
-				-- Автострел, если включен
-				if AIM.AutoShoot ~= "Off" then
-					if not mouse1click then
-						local tool = myChar:FindFirstChildOfClass("Tool")
-						if tool then tool:Activate() end
-					end
-				end
+			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
+			
+			-- Автострел (если включен)
+			if AIM.AutoShoot ~= "Off" then
+				local tool = myChar:FindFirstChildOfClass("Tool")
+				if tool then tool:Activate() end
 			end
 		end
 	end)
