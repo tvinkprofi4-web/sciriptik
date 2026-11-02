@@ -2363,7 +2363,7 @@ local function setupAim()
 	local enabled = false
 	local holding = false
 	local hasPass = (AIM.GamePassId == 0)
-	local isMobile = UserInputService.TouchEnabled 
+	local isMobile = (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled)
 		or UserInputService.AccelerometerEnabled 
 		or UserInputService.GyroscopeEnabled 
 		or (playerGui:FindFirstChild("TouchGui") ~= nil)
@@ -2381,10 +2381,16 @@ local function setupAim()
 		end)
 	end)
 
-	local function checkIsMobile()
+	local function isMobileDevice()
 		if AIM.DeviceMode == "Mobile" then return true end
 		if AIM.DeviceMode == "PC" then return false end
 		return isMobile
+			or (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled)
+			or (playerGui:FindFirstChild("TouchGui") ~= nil)
+	end
+
+	local function checkIsMobile()
+		return isMobileDevice()
 	end
 
 	local COLORS = {
@@ -3892,10 +3898,10 @@ local function setupAim()
 		return diagnoseText
 	end
 
-	-- FIX: The aim turns the camera BEFORE the game camera runs (Camera - 1).
-	-- The game camera then starts from the aim direction, and the weapon / arm scripts of
-	-- the game place the weapon with the final direction in the same frame.
-	RunService:BindToRenderStep("AimMain", Enum.RenderPriority.Camera.Value - 1, function(dt)
+	-- FIX: The aim turns the camera BEFORE the game camera runs (Camera - 1) on PC,
+	-- and AFTER the game camera (Camera + 1) on mobile so it is not overwritten by the standard camera.
+	local aimPriority = isMobileDevice() and (Enum.RenderPriority.Camera.Value + 1) or (Enum.RenderPriority.Camera.Value - 1)
+	RunService:BindToRenderStep("AimMain", aimPriority, function(dt)
 		local cam = workspace.CurrentCamera
 		if not cam then return end
 
