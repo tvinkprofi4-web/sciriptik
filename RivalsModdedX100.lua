@@ -4021,6 +4021,15 @@ local function setupAim()
 			-- Поворот камеры
 			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
 			
+			-- Плавный поворот тела за камерой (только по горизонтали)
+			local camLook = workspace.CurrentCamera.CFrame.LookVector
+			local flatLook = Vector3.new(camLook.X, 0, camLook.Z)
+			if flatLook.Magnitude > 0.1 then
+				local currentCFrame = myRoot.CFrame
+				local targetCFrame = CFrame.lookAt(myRoot.Position, myRoot.Position + flatLook.Unit)
+				-- Плавно интерполируем поворот (0.3 = скорость, можно менять)
+				myRoot.CFrame = currentCFrame:Lerp(targetCFrame, 0.3)
+			end
 
 			-- Автострел (если включен)
 			if AIM.AutoShoot ~= "Off" then
