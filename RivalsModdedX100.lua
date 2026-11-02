@@ -3957,7 +3957,6 @@ local function setupAim()
 
 	-- Упрощенный мобильный аим (железобетонный v2)
 	hasPass = true 
-	local lastAimCFrame = nil
 
 	RunService.RenderStepped:Connect(function()
 		if not hasPass or not enabled then return end
@@ -4011,7 +4010,6 @@ local function setupAim()
 		if closest then
 			-- Поворот камеры
 			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
-			lastAimCFrame = workspace.CurrentCamera.CFrame
 			
 			-- Поворот тела (чтобы оружие смотрело на цель)
 			local lookDir = (closest.Position - myRoot.Position)
@@ -4024,10 +4022,6 @@ local function setupAim()
 			if AIM.AutoShoot ~= "Off" then
 				local tool = myChar:FindFirstChildOfClass("Tool")
 				if tool then tool:Activate() end
-			end
-		else
-			if lastAimCFrame then
-				workspace.CurrentCamera.CFrame = lastAimCFrame
 			end
 		end
 	end)
