@@ -2362,8 +2362,8 @@ local function setupAim()
 	local freezeMouse = function() end
 	local enabled = false
 	local holding = false
-	local hasPass = (AIM.GamePassId == 0)
-	local isMobile = (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled)
+	local hasPass = true
+	local isMobile = UserInputService.TouchEnabled
 		or UserInputService.AccelerometerEnabled 
 		or UserInputService.GyroscopeEnabled 
 		or (playerGui:FindFirstChild("TouchGui") ~= nil)
@@ -2384,9 +2384,8 @@ local function setupAim()
 	local function isMobileDevice()
 		if AIM.DeviceMode == "Mobile" then return true end
 		if AIM.DeviceMode == "PC" then return false end
-		return isMobile
-			or (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled)
-			or (playerGui:FindFirstChild("TouchGui") ~= nil)
+		if UserInputService.TouchEnabled then return true end
+		return isMobile or (playerGui:FindFirstChild("TouchGui") ~= nil)
 	end
 
 	local function checkIsMobile()
@@ -3636,10 +3635,10 @@ local function setupAim()
 
 	local function isVisible(cam, part, targetChar)
 		if not AIM.WallCheck then return true end
-		if (holding or checkIsMobile()) and AIM.HoldThroughWalls then return true end
+		if (holding or isMobileDevice()) and AIM.HoldThroughWalls then return true end
 		local origin = cam.CFrame.Position
 		local dir = part.Position - origin
-		local ignore = { targetChar, player.Character, cam }
+		local ignore = { player.Character, cam }
 
 		for _, child in ipairs(workspace:GetChildren()) do
 			if child:IsA("Model") and (string.find(string.lower(child.Name), "view") or string.find(string.lower(child.Name), "arm")) then
@@ -3647,29 +3646,22 @@ local function setupAim()
 			end
 		end
 
-		for _ = 1, 10 do
+		for _ = 1, 6 do
 			rayParams.FilterDescendantsInstances = ignore
 			local result = workspace:Raycast(origin, dir, rayParams)
 			if not result then
 				return true
 			end
 			local hit = result.Instance
+			if hit:IsDescendantOf(targetChar) then
+				return true
+			end
 			local model = hit:FindFirstAncestorOfClass("Model")
 			local isCharacter = model and model:FindFirstChildOfClass("Humanoid")
-			local hitName = string.lower(hit.Name)
-			local penetrable = hit.Transparency > 0.35 
-				or not hit.CanCollide 
-				or isCharacter 
-				or string.find(hitName, "fence") 
-				or string.find(hitName, "grate") 
-				or string.find(hitName, "glass") 
-				or string.find(hitName, "leaf") 
-				or string.find(hitName, "bush") 
-				or string.find(hitName, "barrier")
-				or string.find(hitName, "border")
-				or string.find(hitName, "spawn")
-			if penetrable then
-				table.insert(ignore, isCharacter and model or hit)
+			if isCharacter then
+				table.insert(ignore, model)
+			elseif hit.Transparency > 0.75 then
+				table.insert(ignore, hit)
 			else
 				return false
 			end
@@ -3762,7 +3754,7 @@ local function setupAim()
 
 	local function wantsAim()
 		if not (hasPass and enabled) or menuVisible then return false end
-		if checkIsMobile() then
+		if isMobileDevice() then
 			return aliveHumanoid(player.Character) ~= nil
 		end
 		if AIM.HoldToAim and not holding then return false end
@@ -3953,12 +3945,14 @@ local function setupAim()
 			local want = wantedLook(cam, lockedPart)
 			aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
 			cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
+			print("[AIM DEBUG] Camera rotated to:", lockedPart.Name)
 		elseif lockedPart then
 			aimLook = nil
 			local camPos = cam.CFrame.Position
 			local want = wantedLook(cam, lockedPart)
 			local look = trackLook(cam.CFrame.LookVector, want, dt)
 			cam.CFrame = lookCFrame(camPos, look)
+			print("[AIM DEBUG] Camera rotated to:", lockedPart.Name)
 		else
 			aimLook = nil
 		end
