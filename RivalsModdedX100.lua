@@ -2525,12 +2525,21 @@ local function setupAim()
 		MarketplaceService:PromptGamePassPurchase(player, AIM.GamePassId)
 	end
 
+	local function updateAutoRotate()
+		local myChar = player.Character
+		local hum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.AutoRotate = not enabled
+		end
+	end
+
 	local function toggleAim()
 		if not hasPass then
 			buyPass()
 			return
 		end
 		enabled = not enabled
+		updateAutoRotate()
 		updateUI()
 	end
 
@@ -2749,6 +2758,7 @@ local function setupAim()
 					return
 				end
 				enabled = on
+				updateAutoRotate()
 			else
 				AIM[key] = on
 			end
@@ -4011,13 +4021,7 @@ local function setupAim()
 			-- Поворот камеры
 			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
 			
-			-- Поворот тела (чтобы оружие смотрело на цель)
-			local lookDir = (closest.Position - myRoot.Position)
-			local flatDir = Vector3.new(lookDir.X, 0, lookDir.Z)
-			if flatDir.Magnitude > 0.1 then
-				myRoot.CFrame = CFrame.lookAt(myRoot.Position, myRoot.Position + flatDir.Unit)
-			end
-			
+
 			-- Автострел (если включен)
 			if AIM.AutoShoot ~= "Off" then
 				local tool = myChar:FindFirstChildOfClass("Tool")
@@ -4108,6 +4112,7 @@ local function setupAim()
 	end)
 	player.CharacterAdded:Connect(function()
 		bodyTurned, savedAutoRotate, turnedHumanoid = false, nil, nil
+		task.defer(updateAutoRotate)
 	end)
 	gui.Destroying:Connect(releaseBody)
 
