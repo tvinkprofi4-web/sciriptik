@@ -3976,45 +3976,6 @@ local function setupAim()
 		local shortestDist = math.huge
 		local myCamPos = workspace.CurrentCamera.CFrame.Position
 
-		-- Функция для проверки, является ли игрок тиммейтом (расширенная)
-		local function isTeammate(other)
-			if not other or other == player then return false end
-			if not AIM.TeamCheck then return false end
-			
-			-- 1. Стандартный Team
-			if other.Team and player.Team and other.Team == player.Team then return true end
-			
-			-- 2. Атрибуты у игрока
-			local teamFields = {"Team", "TeamId", "TeamName", "MatchTeam", "Side", "Squad", "Faction"}
-			for _, field in ipairs(teamFields) do
-				local myAttr = player:GetAttribute(field)
-				local otherAttr = other:GetAttribute(field)
-				if myAttr and otherAttr and myAttr == otherAttr then return true end
-			end
-			
-			-- 3. Атрибуты у персонажа
-			local myChar = player.Character
-			local otherChar = other.Character
-			if myChar and otherChar then
-				for _, field in ipairs(teamFields) do
-					local myAttr = myChar:GetAttribute(field)
-					local otherAttr = otherChar:GetAttribute(field)
-					if myAttr and otherAttr and myAttr == otherAttr then return true end
-				end
-			end
-
-			-- 4. Цвета команд (игнорируя стандартные белые/серые)
-			if other.TeamColor and player.TeamColor and other.TeamColor == player.TeamColor then
-				local neutral1 = BrickColor.new("Medium stone grey")
-				local neutral2 = BrickColor.new("White")
-				if player.TeamColor ~= neutral1 and player.TeamColor ~= neutral2 then
-					return true
-				end
-			end
-			
-			return false
-		end
-
 		for _, other in ipairs(Players:GetPlayers()) do
 			if other ~= player and other.Character then
 				local enemyHum = other.Character:FindFirstChildOfClass("Humanoid")
@@ -4022,7 +3983,8 @@ local function setupAim()
 				
 				if enemyHum and enemyHum.Health > 0 and enemyHead then
 					-- Проверка на тиммейтов
-					if not isTeammate(other) then
+					-- Проверка на тиммейтов (использует внешнюю функцию isTeammate из блока ESP)
+					if not (AIM.TeamCheck and isTeammate(other)) then
 						local dist = (enemyHead.Position - myCamPos).Magnitude
 						if dist < shortestDist and dist < 500 then
 							-- Проверка стен (если включена)
