@@ -3957,6 +3957,7 @@ local function setupAim()
 
 	-- Упрощенный мобильный аим (железобетонный v2)
 	hasPass = true 
+	local lastAimCFrame = nil
 
 	RunService.RenderStepped:Connect(function()
 		if not hasPass or not enabled then return end
@@ -3982,7 +3983,6 @@ local function setupAim()
 				local enemyHead = other.Character:FindFirstChild("Head")
 				
 				if enemyHum and enemyHum.Health > 0 and enemyHead then
-					-- Проверка на тиммейтов
 					-- Проверка на тиммейтов (использует внешнюю функцию isTeammate из блока ESP)
 					if not (AIM.TeamCheck and isTeammate(other)) then
 						local dist = (enemyHead.Position - myCamPos).Magnitude
@@ -4007,14 +4007,27 @@ local function setupAim()
 			end
 		end
 
-		-- 3. Поворот камеры и автострел
+		-- 3. Поворот камеры, поворот тела и автострел
 		if closest then
+			-- Поворот камеры
 			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
+			lastAimCFrame = workspace.CurrentCamera.CFrame
+			
+			-- Поворот тела (чтобы оружие смотрело на цель)
+			local lookDir = (closest.Position - myRoot.Position)
+			local flatDir = Vector3.new(lookDir.X, 0, lookDir.Z)
+			if flatDir.Magnitude > 0.1 then
+				myRoot.CFrame = CFrame.lookAt(myRoot.Position, myRoot.Position + flatDir.Unit)
+			end
 			
 			-- Автострел (если включен)
 			if AIM.AutoShoot ~= "Off" then
 				local tool = myChar:FindFirstChildOfClass("Tool")
 				if tool then tool:Activate() end
+			end
+		else
+			if lastAimCFrame then
+				workspace.CurrentCamera.CFrame = lastAimCFrame
 			end
 		end
 	end)
