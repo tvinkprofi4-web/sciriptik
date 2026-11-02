@@ -3890,10 +3890,8 @@ local function setupAim()
 		return diagnoseText
 	end
 
-	-- FIX: The aim turns the camera BEFORE the game camera runs (Camera - 1) on PC,
-	-- and AFTER the game camera (Camera + 1) on mobile so it is not overwritten by the standard camera.
-	local aimPriority = isMobileDevice() and (Enum.RenderPriority.Camera.Value + 1) or (Enum.RenderPriority.Camera.Value - 1)
-	RunService:BindToRenderStep("AimMain", aimPriority, function(dt)
+	-- PC camera bind and ESP update
+	RunService:BindToRenderStep("AimMain", Enum.RenderPriority.Camera.Value - 1, function(dt)
 		local cam = workspace.CurrentCamera
 		if not cam then return end
 
@@ -3906,10 +3904,6 @@ local function setupAim()
 			end
 		end
 
-		if AIM.AimMode == "Override" and aimLook then
-			cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
-		end
-
 		local targets = getTargets()
 		updateESP(cam, targets)
 
@@ -3917,44 +3911,120 @@ local function setupAim()
 			circle.Position = UDim2.fromScale(0.5, 0.5)
 		end
 
-		local prevTarget = lockedTarget
-		lockedPart, lockedTarget = nil, nil
-		if wantsAim() then
-			lockedPart, lockedTarget = getClosestTarget(cam, targets, prevTarget)
-		end
-		if not lockedPart then
-			prevWant, prevChar = nil, nil
-		end
-		player:SetAttribute("AimPoint", lockedPart and aimPosition(lockedPart) or nil)
-		freezeMouse(lockedPart ~= nil and AIM.FreezeMouse and not checkIsMobile())
+		if not isMobileDevice() then
+			if AIM.AimMode == "Override" and aimLook then
+				cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
+			end
 
-		if lockedTarget and AIM.ShowTargetInfo then
-			local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-			local d = myRoot and math.floor((lockedPart.Position - myRoot.Position).Magnitude + 0.5) or 0
-			local enemyWeapon = WeaponDetector.GetHeldItem(lockedTarget.char)
-			local weaponInfo = enemyWeapon and (" [" .. enemyWeapon.Name .. "]") or ""
-			targetInfo.Text = trf("?? %s%s  �  %d m", lockedTarget.name, weaponInfo, d)
-			targetInfo.TextColor3 = COLORS.enemy
-			targetInfo.Visible = true
-		else
-			-- Completely hidden when no locked target: clean screen, no debug banners!
-			targetInfo.Visible = false
+			local prevTarget = lockedTarget
+			lockedPart, lockedTarget = nil, nil
+			if wantsAim() then
+				lockedPart, lockedTarget = getClosestTarget(cam, targets, prevTarget)
+			end
+			if not lockedPart then
+				prevWant, prevChar = nil, nil
+			end
+			player:SetAttribute("AimPoint", lockedPart and aimPosition(lockedPart) or nil)
+			freezeMouse(lockedPart ~= nil and AIM.FreezeMouse)
+
+			if lockedTarget and AIM.ShowTargetInfo then
+				local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				local d = myRoot and math.floor((lockedPart.Position - myRoot.Position).Magnitude + 0.5) or 0
+				local enemyWeapon = WeaponDetector.GetHeldItem(lockedTarget.char)
+				local weaponInfo = enemyWeapon and (" [" .. enemyWeapon.Name .. "]") or ""
+				targetInfo.Text = trf("?? %s%s    %d m", lockedTarget.name, weaponInfo, d)
+				targetInfo.TextColor3 = COLORS.enemy
+				targetInfo.Visible = true
+			else
+				targetInfo.Visible = false
+			end
+
+			if lockedPart and AIM.AimMode == "Override" then
+				local want = wantedLook(cam, lockedPart)
+				aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
+				cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
+			elseif lockedPart then
+				aimLook = nil
+				local camPos = cam.CFrame.Position
+				local want = wantedLook(cam, lockedPart)
+				local look = trackLook(cam.CFrame.LookVector, want, dt)
+				cam.CFrame = lookCFrame(camPos, look)
+			else
+				aimLook = nil
+			end
+		end
+	end)
+
+	-- Упрощенный мобильный аим (железобетонный)
+	local myCamera = workspace.CurrentCamera
+	local mobileAimEnabled = false
+	local lockedEnemy = nil
+
+	-- Отключаем стандартную проверку геймпасса, чтобы не мешала
+	hasPass = true 
+
+	RunService.RenderStepped:Connect(function()
+		if not hasPass or not enabled then return end
+		if not isMobileDevice() then return end
+		myCamera = workspace.CurrentCamera or myCamera
+		if not myCamera then return end
+		
+		-- Ищем ближайшего врага
+		local closest = nil
+		local shortestDist = math.huge
+		local myChar = player.Character
+		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+		
+		if not myRoot then return end
+
+		for _, other in ipairs(Players:GetPlayers()) do
+			if other ~= player and other.Character then
+				local enemyHum = other.Character:FindFirstChildOfClass("Humanoid")
+				local enemyHead = other.Character:FindFirstChild("Head")
+				
+				if enemyHum and enemyHum.Health > 0 and enemyHead then
+					-- Проверка на тиммейтов (если включена)
+					local isTeammate = false
+					if AIM.TeamCheck and other.Team and player.Team and other.Team == player.Team then
+						isTeammate = true
+					end
+					
+					if not isTeammate then
+						local dist = (enemyHead.Position - myCamera.CFrame.Position).Magnitude
+						if dist < shortestDist and dist < 500 then -- Радиус поиска 500 студов
+							shortestDist = dist
+							closest = enemyHead
+						end
+					end
+				end
+			end
 		end
 
-		if lockedPart and AIM.AimMode == "Override" then
-			local want = wantedLook(cam, lockedPart)
-			aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
-			cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
-			print("[AIM DEBUG] Camera rotated to:", lockedPart.Name)
-		elseif lockedPart then
-			aimLook = nil
-			local camPos = cam.CFrame.Position
-			local want = wantedLook(cam, lockedPart)
-			local look = trackLook(cam.CFrame.LookVector, want, dt)
-			cam.CFrame = lookCFrame(camPos, look)
-			print("[AIM DEBUG] Camera rotated to:", lockedPart.Name)
-		else
-			aimLook = nil
+		-- Если нашли цель — поворачиваем камеру
+		if closest then
+			-- Игнорируем стены, если WallCheck выключен (для мобилки лучше выключить, чтобы работало)
+			-- Но если хочешь проверку стен, используй Raycast (ниже)
+			local canSee = true
+			if AIM.WallCheck then
+				local rayParams = RaycastParams.new()
+				rayParams.FilterDescendantsInstances = {myChar, closest.Parent}
+				rayParams.FilterType = Enum.RaycastFilterType.Exclude
+				local result = workspace:Raycast(myCamera.CFrame.Position, (closest.Position - myCamera.CFrame.Position), rayParams)
+				if result then canSee = false end
+			end
+
+			if canSee then
+				-- Мгновенный поворот камеры
+				myCamera.CFrame = CFrame.lookAt(myCamera.CFrame.Position, closest.Position)
+				
+				-- Автострел, если включен
+				if AIM.AutoShoot ~= "Off" then
+					if not mouse1click then
+						local tool = myChar:FindFirstChildOfClass("Tool")
+						if tool then tool:Activate() end
+					end
+				end
+			end
 		end
 	end)
 
