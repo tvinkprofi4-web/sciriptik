@@ -2528,8 +2528,15 @@ local function setupAim()
 	local function updateAutoRotate()
 		local myChar = player.Character
 		local hum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.AutoRotate = not enabled
+		if not hum then return end
+		if isMobileDevice() then
+			if enabled then
+				hum.AutoRotate = false
+			else
+				hum.AutoRotate = true
+			end
+		else
+			hum.AutoRotate = true
 		end
 	end
 
@@ -4021,14 +4028,16 @@ local function setupAim()
 			-- Поворот камеры
 			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
 			
-			-- Плавный поворот тела за камерой (только по горизонтали)
-			local camLook = workspace.CurrentCamera.CFrame.LookVector
-			local flatLook = Vector3.new(camLook.X, 0, camLook.Z)
-			if flatLook.Magnitude > 0.1 then
-				local currentCFrame = myRoot.CFrame
-				local targetCFrame = CFrame.lookAt(myRoot.Position, myRoot.Position + flatLook.Unit)
-				-- Плавно интерполируем поворот (0.3 = скорость, можно менять)
-				myRoot.CFrame = currentCFrame:Lerp(targetCFrame, 0.3)
+			-- Плавный поворот тела за камерой (только по горизонтали для мобильных устройств)
+			if isMobileDevice() then
+				local camLook = workspace.CurrentCamera.CFrame.LookVector
+				local flatLook = Vector3.new(camLook.X, 0, camLook.Z)
+				if flatLook.Magnitude > 0.1 then
+					local currentCFrame = myRoot.CFrame
+					local targetCFrame = CFrame.lookAt(myRoot.Position, myRoot.Position + flatLook.Unit)
+					-- Плавно интерполируем поворот (0.3 = скорость, можно менять)
+					myRoot.CFrame = currentCFrame:Lerp(targetCFrame, 0.3)
+				end
 			end
 
 			-- Автострел (если включен)
