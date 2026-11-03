@@ -3597,7 +3597,12 @@ local function setupAim()
 		return false
 	end
 
+	local espLastUpdate = 0
+	local espRayCache = {}
+
 	local function updateESP(cam, targets)
+		if os.clock() - espLastUpdate < 0.033 then return end -- 30 Гц
+		espLastUpdate = os.clock()
 		local seen = {}
 
 		if hasPass and AIM.ESP then
@@ -3615,7 +3620,15 @@ local function setupAim()
 					if (AIM.ESPTeammates or not mate) and dist <= AIM.ESPMaxDistance then
 						seen[char] = true
 						local o = espObjects[char] or createESP(char)
-						local visible = isVisible(cam, getAimPart(char) or root, char)
+						local cacheKey = char
+						local now = os.clock()
+						local visible
+						if espRayCache[cacheKey] and now - espRayCache[cacheKey].t < 0.1 then
+							visible = espRayCache[cacheKey].v
+						else
+							visible = isVisible(cam, getAimPart(char) or root, char)
+							espRayCache[cacheKey] = { v = visible, t = now }
+						end
 						local color
 						if mate then
 							color = COLORS.team
@@ -3770,7 +3783,6 @@ local function setupAim()
 	end
 
 	local function wantsAim()
-		print("AimCheck:", holding, "Mobile:", isMobileDevice(), "Enabled:", enabled)
 		if not (hasPass and enabled) or menuVisible then return false end
 		if isMobileDevice() then
 			return aliveHumanoid(player.Character) ~= nil
@@ -3961,95 +3973,118 @@ local function setupAim()
 				local want = wantedLook(cam, lockedPart)
 				aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
 				cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
-				print("CameraRotated:", lockedPart and lockedPart.Name or "nil")
 			elseif lockedPart then
 				aimLook = nil
 				local camPos = cam.CFrame.Position
 				local want = wantedLook(cam, lockedPart)
 				local look = trackLook(cam.CFrame.LookVector, want, dt)
 				cam.CFrame = lookCFrame(camPos, look)
-				print("CameraRotated:", lockedPart and lockedPart.Name or "nil")
 			else
 				aimLook = nil
-				if wantsAim() then
-					print("CameraRotated:", lockedPart and lockedPart.Name or "nil")
-				end
 			end
 		end
 	end)
 
-	-- Упрощенный мобильный аим (железобетонный v2)
-	hasPass = true 
+	-- [[ МОБИЛЬНЫЙ АИМ v3 (FOV, угол, кэш, плавность) ]]
+	local mobileLastScan = 0
+	local mobileCachedTargets = {}
+	local mobileRayParams = RaycastParams.new()
+	mobileRayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+	local function getMobileTargets()
+		if os.clock() - mobileLastScan < 0.1 then
+			return mobileCachedTargets
+		end
+		mobileLastScan = os.clock()
+		local list = {}
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+				local head = plr.Character:FindFirstChild("Head")
+				if hum and hum.Health > 0 and head then
+					if not (AIM.TeamCheck and isTeammate(plr)) then
+						table.insert(list, { char = plr.Character, plr = plr, head = head, hum = hum })
+					end
+				end
+			end
+		end
+		mobileCachedTargets = list
+		return list
+	end
 
 	RunService.RenderStepped:Connect(function()
-		if not hasPass or not enabled then return end
+		if not hasPass or not enabled or menuVisible then return end
 		if not isMobileDevice() then return end
-		if not workspace.CurrentCamera then return end
-		
-		-- 1. Проверка: жив ли ты сам (чтобы не аимиться после смерти)
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+
 		local myChar = player.Character
 		local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-		if not myHum or myHum.Health <= 0 then return end
-		
-		local myRoot = myChar:FindFirstChild("HumanoidRootPart")
-		if not myRoot then return end
+		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+		if not myHum or myHum.Health <= 0 or not myRoot then return end
 
-		-- 2. Ищем ближайшего врага
-		local closest = nil
-		local shortestDist = math.huge
-		local myCamPos = workspace.CurrentCamera.CFrame.Position
+		local camPos = cam.CFrame.Position
+		local camLook = cam.CFrame.LookVector
+		local vs = cam.ViewportSize
+		local center = Vector2.new(vs.X / 2, vs.Y / 2)
+		local fovScale = vs.Y / math.max(hud.AbsoluteSize.Y, 1)
+		local maxFov = AIM.FOV * fovScale
 
-		for _, other in ipairs(Players:GetPlayers()) do
-			if other ~= player and other.Character then
-				local enemyHum = other.Character:FindFirstChildOfClass("Humanoid")
-				local enemyHead = other.Character:FindFirstChild("Head")
-				
-				if enemyHum and enemyHum.Health > 0 and enemyHead then
-					-- Проверка на тиммейтов (использует внешнюю функцию isTeammate из блока ESP)
-					if not (AIM.TeamCheck and isTeammate(other)) then
-						local dist = (enemyHead.Position - myCamPos).Magnitude
-						if dist < shortestDist and dist < 500 then
-							-- Проверка стен (если включена)
-							local canSee = true
-							if AIM.WallCheck then
-								local rayParams = RaycastParams.new()
-								rayParams.FilterDescendantsInstances = {myChar, other.Character}
-								rayParams.FilterType = Enum.RaycastFilterType.Exclude
-								local result = workspace:Raycast(myCamPos, (enemyHead.Position - myCamPos), rayParams)
-								if result then canSee = false end
+		local bestPart, bestDist = nil, math.huge
+		for _, t in ipairs(getMobileTargets()) do
+			local headPos = t.head.Position
+			local sp, onScreen = cam:WorldToViewportPoint(headPos)
+			if onScreen then
+				local screenDist = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+				if screenDist < maxFov and screenDist < bestDist then
+					local dir = (headPos - camPos).Unit
+					local angle = math.deg(math.acos(math.clamp(camLook:Dot(dir), -1, 1)))
+					if angle <= 45 then
+						local visible = true
+						if AIM.WallCheck then
+							mobileRayParams.FilterDescendantsInstances = { myChar, cam }
+							local result = workspace:Raycast(camPos, headPos - camPos, mobileRayParams)
+							if result and not result.Instance:IsDescendantOf(t.char) then
+								visible = false
 							end
-							
-							if canSee then
-								shortestDist = dist
-								closest = enemyHead
-							end
+						end
+						if visible then
+							bestPart, bestDist = t.head, screenDist
 						end
 					end
 				end
 			end
 		end
 
-		-- 3. Поворот камеры, поворот тела и автострел
-		if closest then
-			-- Поворот камеры
-			workspace.CurrentCamera.CFrame = CFrame.lookAt(myCamPos, closest.Position)
-			
-			-- Плавный поворот тела за камерой (только по горизонтали для мобильных устройств)
-			if isMobileDevice() then
-				local camLook = workspace.CurrentCamera.CFrame.LookVector
-				local flatLook = Vector3.new(camLook.X, 0, camLook.Z)
-				if flatLook.Magnitude > 0.1 then
-					local currentCFrame = myRoot.CFrame
-					local targetCFrame = CFrame.lookAt(myRoot.Position, myRoot.Position + flatLook.Unit)
-					-- Плавно интерполируем поворот (0.3 = скорость, можно менять)
-					myRoot.CFrame = currentCFrame:Lerp(targetCFrame, 0.3)
+		if bestPart then
+			local targetPos = bestPart.Position
+			if AIM.Prediction > 0 then
+				local root = bestPart.Parent and bestPart.Parent:FindFirstChild("HumanoidRootPart")
+				if root then
+					targetPos = targetPos + root.AssemblyLinearVelocity * AIM.Prediction
+				end
+			end
+			local want = CFrame.lookAt(camPos, targetPos)
+			local alpha = AIM.InstantSnap and 1 or math.clamp(AIM.Smoothness, 0.05, 1)
+			cam.CFrame = cam.CFrame:Lerp(want, alpha)
+
+			if AIM.TurnBody then
+				local flat = Vector3.new(targetPos.X - myRoot.Position.X, 0, targetPos.Z - myRoot.Position.Z)
+				if flat.Magnitude > 0.1 then
+					local bodyWant = CFrame.lookAt(myRoot.Position, myRoot.Position + flat.Unit)
+					myRoot.CFrame = myRoot.CFrame:Lerp(bodyWant, alpha)
 				end
 			end
 
-			-- Автострел (если включен)
 			if AIM.AutoShoot ~= "Off" then
 				local tool = myChar:FindFirstChildOfClass("Tool")
-				if tool then tool:Activate() end
+				if tool then
+					local dir = (targetPos - camPos).Unit
+					local angle = math.deg(math.acos(math.clamp(cam.CFrame.LookVector:Dot(dir), -1, 1)))
+					if angle <= (AIM.AutoShootAngle or 10) then
+						tool:Activate()
+					end
+				end
 			end
 		end
 	end)
