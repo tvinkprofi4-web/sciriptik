@@ -3770,6 +3770,7 @@ local function setupAim()
 	end
 
 	local function wantsAim()
+		print("AimCheck:", holding, "Mobile:", isMobileDevice(), "Enabled:", enabled)
 		if not (hasPass and enabled) or menuVisible then return false end
 		if isMobileDevice() then
 			return aliveHumanoid(player.Character) ~= nil
@@ -3960,14 +3961,19 @@ local function setupAim()
 				local want = wantedLook(cam, lockedPart)
 				aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
 				cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
+				print("CameraRotated:", lockedPart and lockedPart.Name or "nil")
 			elseif lockedPart then
 				aimLook = nil
 				local camPos = cam.CFrame.Position
 				local want = wantedLook(cam, lockedPart)
 				local look = trackLook(cam.CFrame.LookVector, want, dt)
 				cam.CFrame = lookCFrame(camPos, look)
+				print("CameraRotated:", lockedPart and lockedPart.Name or "nil")
 			else
 				aimLook = nil
+				if wantsAim() then
+					print("CameraRotated:", lockedPart and lockedPart.Name or "nil")
+				end
 			end
 		end
 	end)
