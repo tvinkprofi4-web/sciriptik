@@ -3541,6 +3541,62 @@ local function setupAim()
 		frame.Rotation = math.deg(math.atan2(d.Y, d.X))
 	end
 
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+	local PART_NAMES = {
+		Head = { "Head" },
+		UpperTorso = { "UpperTorso", "Torso" },
+		HumanoidRootPart = { "HumanoidRootPart", "Torso" },
+	}
+
+	local function getAimPart(char)
+		local partName = AIM.HeadOnly and "Head" or AIM.AimPart
+		for _, name in ipairs(PART_NAMES[partName] or { partName }) do
+			local p = char:FindFirstChild(name)
+			if p and p:IsA("BasePart") then
+				return p
+			end
+		end
+		return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+	end
+
+	local function isVisible(cam, part, targetChar)
+		if not AIM.WallCheck then return true end
+		if (holding or isMobileDevice()) and AIM.HoldThroughWalls then return true end
+		local origin = cam.CFrame.Position
+		local dir = part.Position - origin
+		local ignore = { player.Character, cam }
+
+		for _, child in ipairs(workspace:GetChildren()) do
+			if child:IsA("Model") and (string.find(string.lower(child.Name), "view") or string.find(string.lower(child.Name), "arm")) then
+				table.insert(ignore, child)
+			end
+		end
+
+		for _ = 1, 6 do
+			rayParams.FilterDescendantsInstances = ignore
+			local result = workspace:Raycast(origin, dir, rayParams)
+			if not result then
+				return true
+			end
+			local hit = result.Instance
+			if hit:IsDescendantOf(targetChar) then
+				return true
+			end
+			local model = hit:FindFirstAncestorOfClass("Model")
+			local isCharacter = model and model:FindFirstChildOfClass("Humanoid")
+			if isCharacter then
+				table.insert(ignore, model)
+			elseif hit.Transparency > 0.75 then
+				table.insert(ignore, hit)
+			else
+				return false
+			end
+		end
+		return false
+	end
+
 	local function updateESP(cam, targets)
 		local seen = {}
 
@@ -3616,9 +3672,6 @@ local function setupAim()
 		end
 	end
 
-	local rayParams = RaycastParams.new()
-	rayParams.FilterType = Enum.RaycastFilterType.Exclude
-
 	local function getAimCenter(cam)
 		-- FOV circle & aim center ALWAYS locked to screen crosshair center!
 		local vs = cam.ViewportSize
@@ -3631,59 +3684,6 @@ local function setupAim()
 			return cam.CFrame.LookVector
 		end
 		return cam:ViewportPointToRay(center.X, center.Y).Direction.Unit
-	end
-
-	local PART_NAMES = {
-		Head = { "Head" },
-		UpperTorso = { "UpperTorso", "Torso" },
-		HumanoidRootPart = { "HumanoidRootPart", "Torso" },
-	}
-
-	local function getAimPart(char)
-		local partName = AIM.HeadOnly and "Head" or AIM.AimPart
-		for _, name in ipairs(PART_NAMES[partName] or { partName }) do
-			local p = char:FindFirstChild(name)
-			if p and p:IsA("BasePart") then
-				return p
-			end
-		end
-		return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
-	end
-
-	local function isVisible(cam, part, targetChar)
-		if not AIM.WallCheck then return true end
-		if (holding or isMobileDevice()) and AIM.HoldThroughWalls then return true end
-		local origin = cam.CFrame.Position
-		local dir = part.Position - origin
-		local ignore = { player.Character, cam }
-
-		for _, child in ipairs(workspace:GetChildren()) do
-			if child:IsA("Model") and (string.find(string.lower(child.Name), "view") or string.find(string.lower(child.Name), "arm")) then
-				table.insert(ignore, child)
-			end
-		end
-
-		for _ = 1, 6 do
-			rayParams.FilterDescendantsInstances = ignore
-			local result = workspace:Raycast(origin, dir, rayParams)
-			if not result then
-				return true
-			end
-			local hit = result.Instance
-			if hit:IsDescendantOf(targetChar) then
-				return true
-			end
-			local model = hit:FindFirstAncestorOfClass("Model")
-			local isCharacter = model and model:FindFirstChildOfClass("Humanoid")
-			if isCharacter then
-				table.insert(ignore, model)
-			elseif hit.Transparency > 0.75 then
-				table.insert(ignore, hit)
-			else
-				return false
-			end
-		end
-		return false
 	end
 
 	local VISIBLE_PARTS = { "Head", "UpperTorso", "Torso", "HumanoidRootPart" }
