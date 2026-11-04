@@ -2323,7 +2323,8 @@ local function setupAim()
 		AutoShootDelay = 0,
 		AutoShootKey = Enum.KeyCode.V,
 		KnifeAuto = true,
-		KnifeAutoRange = 8.5,
+		KnifeAutoRange = 6.5,
+		KnifeAutoCooldown = 1.25,
 		ESPShowWeapon = true,
 		NoCameraShake = true,
 		ShowKeybinds = true,
@@ -3376,78 +3377,88 @@ local function setupAim()
 		return list
 	end
 
-	-- [[ МОДУЛЬ ОПРЕДЕЛЕНИЯ ОРУЖИЯ В РУКАХ / WEAPON DETECTOR ]]
+	-- [[ МОДУЛЬ ОПРЕДЕЛЕНИЯ ОРУЖИЯ v2 (жёстче ищет нож) ]]
 	local WeaponDetector = {}
 	local MELEE_KEYWORDS = {
 		knife = true, blade = true, katana = true, sword = true, dagger = true,
 		scythe = true, axe = true, machete = true, karambit = true, butterfly = true,
-		bat = true, crowbar = true, hammer = true, fists = true, melee = true
+		bat = true, crowbar = true, hammer = true, fists = true, melee = true,
+		balisong = true, combat = true, pocket = true, trench = true,
 	}
+
+	local function isNameMelee(name)
+		local lower = string.lower(tostring(name or ""))
+		for kw in pairs(MELEE_KEYWORDS) do
+			if string.find(lower, kw, 1, true) then
+				return true
+			end
+		end
+		return false
+	end
 
 	function WeaponDetector.GetHeldItem(char)
 		if not char then return nil end
+
 		local tool = char:FindFirstChildOfClass("Tool")
 		if tool then
-			local lowerName = string.lower(tool.Name)
 			local isMelee = tool:GetAttribute("Melee") == true
-			if not isMelee then
-				for kw in pairs(MELEE_KEYWORDS) do
-					if string.find(lowerName, kw, 1, true) then
-						isMelee = true
-						break
-					end
-				end
-			end
+				or tool:GetAttribute("IsMelee") == true
+				or tool:GetAttribute("WeaponType") == "Melee"
+				or isNameMelee(tool.Name)
 			return { Tool = tool, Name = tool.Name, IsMelee = isMelee, Type = isMelee and "Melee" or "Gun" }
 		end
-		local attrName = char:GetAttribute("EquippedWeapon") or char:GetAttribute("CurrentWeapon") or char:GetAttribute("Weapon")
+
+		local attrName = char:GetAttribute("EquippedWeapon") or char:GetAttribute("CurrentWeapon") or char:GetAttribute("Weapon") or char:GetAttribute("HeldItem")
 		if attrName then
-			local lowerName = string.lower(tostring(attrName))
-			local isMelee = false
-			for kw in pairs(MELEE_KEYWORDS) do
-				if string.find(lowerName, kw, 1, true) then
-					isMelee = true
-					break
-				end
-			end
-			return { Tool = nil, Name = tostring(attrName), IsMelee = isMelee, Type = isMelee and "Melee" or "Gun" }
+			return { Tool = nil, Name = tostring(attrName), IsMelee = isNameMelee(attrName), Type = isNameMelee(attrName) and "Melee" or "Gun" }
 		end
+
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			local hAttr = hum:GetAttribute("EquippedWeapon") or hum:GetAttribute("CurrentWeapon")
+			if hAttr then
+				return { Tool = nil, Name = tostring(hAttr), IsMelee = isNameMelee(hAttr), Type = isNameMelee(hAttr) and "Melee" or "Gun" }
+			end
+		end
+
+		for _, child in ipairs(char:GetChildren()) do
+			if child:IsA("Tool") then
+				return { Tool = child, Name = child.Name, IsMelee = isNameMelee(child.Name), Type = isNameMelee(child.Name) and "Melee" or "Gun" }
+			end
+		end
+
 		return nil
 	end
 
-	-- [[ МОДУЛЬ KNIFEAUTO / HEAVY ATTACK 150 DMG TIMING ]]
+	-- [[ МОДУЛЬ KNIFEAUTO v2 (backstab timing, heavy 1.25s) ]]
 	local KnifeAutoModule = {
 		LastHeavy = 0,
-		Cooldown = 0.45,
+		Cooldown = 1.25,
+		MinReach = 0,
+		MaxReach = 7,
 	}
 
-	function KnifeAutoModule.IsHeavyTiming(myRoot, enemyRoot)
+	local function isBehindTarget(myRoot, enemyRoot)
 		if not (myRoot and enemyRoot) then return false end
-		local dist = (enemyRoot.Position - myRoot.Position).Magnitude
-		local maxRange = AIM.KnifeAutoRange or 8.5
-		if dist > maxRange then return false end
-
 		local enemyLook = enemyRoot.CFrame.LookVector
-		local toEnemy = (enemyRoot.Position - myRoot.Position).Unit
-		local myLook = myRoot.CFrame.LookVector
+		local toMe = (myRoot.Position - enemyRoot.Position)
+		if toMe.Magnitude < 0.01 then return false end
+		toMe = toMe.Unit
+		local dot = enemyLook:Dot(toMe)
+		return dot < -0.35
+	end
 
-		-- Heavy Attack наносит 150 урона при ударе в спину/фланг или в критический тайминг дистанции
-		local facingSameWay = myLook:Dot(enemyLook)
-		local behindEnemy = enemyLook:Dot(toEnemy) > -0.25
-
-		if (facingSameWay > 0.15 and behindEnemy) or dist <= 5.8 then
-			return true, dist
-		end
+	function KnifeAutoModule.IsHeavyTiming(myRoot, enemyRoot)
+		if not (myRoot and enemyRoot) then return false, 0 end
+		local dist = (enemyRoot.Position - myRoot.Position).Magnitude
+		if dist < KnifeAutoModule.MinReach or dist > KnifeAutoModule.MaxReach then return false, dist end
+		if isBehindTarget(myRoot, enemyRoot) then return true, dist end
 		return false, dist
 	end
 
 	function KnifeAutoModule.ExecuteHeavy(tool)
 		if not tool then return end
-		tool:Activate()
-		local heavyEvt = tool:FindFirstChild("Heavy") or tool:FindFirstChild("Secondary") or tool:FindFirstChild("Attack")
-		if heavyEvt and heavyEvt:IsA("RemoteEvent") then
-			pcall(function() heavyEvt:FireServer("Heavy") end)
-		end
+		pcall(function() tool:Activate() end)
 		pcall(function()
 			if mouse2click then
 				mouse2click()
@@ -3455,8 +3466,15 @@ local function setupAim()
 				mouse2press()
 				task.wait(0.03)
 				mouse2release()
+			elseif mouse2press then
+				mouse2press()
+				task.wait(0.05)
 			end
 		end)
+		local heavyEvt = tool:FindFirstChild("Heavy") or tool:FindFirstChild("Secondary") or tool:FindFirstChild("HeavyAttack") or tool:FindFirstChild("Attack")
+		if heavyEvt and heavyEvt:IsA("RemoteEvent") then
+			pcall(function() heavyEvt:FireServer("Heavy") end)
+		end
 	end
 
 	local function aliveHumanoid(char)
@@ -4132,21 +4150,19 @@ local function setupAim()
 		local held = WeaponDetector.GetHeldItem(myChar)
 		local targets = getTargets()
 
-		-- [[ 1. KNIFEAUTO: HEAVY ATTACK В ТАЙМИНГ НА 150 УРОНА ]]
+		-- [[ KNIFEAUTO: автоматическая активация при взятии ножа ]]
 		if AIM.KnifeAuto and held and held.IsMelee and myRoot then
 			local now = os.clock()
 			if now - KnifeAutoModule.LastHeavy >= KnifeAutoModule.Cooldown then
 				for _, t in ipairs(targets) do
 					local enemyChar = t.char
 					local enemyRoot = enemyChar and (enemyChar:FindFirstChild("HumanoidRootPart") or enemyChar.PrimaryPart)
-					if enemyRoot and aliveHumanoid(enemyChar) and not enemyChar:FindFirstChildOfClass("ForceField") then
-						if not (AIM.TeamCheck and isTeammate(t.plr)) then
-							local isTiming, d = KnifeAutoModule.IsHeavyTiming(myRoot, enemyRoot)
-							if isTiming then
-								KnifeAutoModule.ExecuteHeavy(held.Tool)
-								KnifeAutoModule.LastHeavy = now
-								break
-							end
+					if enemyRoot and aliveHumanoid(enemyChar) and not enemyChar:FindFirstChildOfClass("ForceField") and not (AIM.TeamCheck and isTeammate(t.plr)) then
+						local isTiming, dist = KnifeAutoModule.IsHeavyTiming(myRoot, enemyRoot)
+						if isTiming then
+							KnifeAutoModule.ExecuteHeavy(held.Tool)
+							KnifeAutoModule.LastHeavy = now
+							break
 						end
 					end
 				end
