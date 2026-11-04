@@ -3459,17 +3459,19 @@ local function setupAim()
 	function KnifeAutoModule.ExecuteHeavy(tool)
 		if not tool then return end
 		pcall(function() tool:Activate() end)
-		pcall(function()
-			if mouse2click then
-				mouse2click()
-			elseif mouse2press and mouse2release then
-				mouse2press()
-				task.wait(0.03)
-				mouse2release()
-			elseif mouse2press then
-				mouse2press()
-				task.wait(0.05)
-			end
+		task.spawn(function()
+			pcall(function()
+				if mouse2click then
+					mouse2click()
+				elseif mouse2press and mouse2release then
+					mouse2press()
+					task.wait(0.03)
+					mouse2release()
+				elseif mouse2press then
+					mouse2press()
+					task.wait(0.05)
+				end
+			end)
 		end)
 		local heavyEvt = tool:FindFirstChild("Heavy") or tool:FindFirstChild("Secondary") or tool:FindFirstChild("HeavyAttack") or tool:FindFirstChild("Attack")
 		if heavyEvt and heavyEvt:IsA("RemoteEvent") then
@@ -3809,7 +3811,9 @@ local function setupAim()
 		if isMobileDevice() then
 			return aliveHumanoid(player.Character) ~= nil
 		end
-		if AIM.HoldToAim and not holding then return false end
+		local myHeld = WeaponDetector.GetHeldItem(player.Character)
+		local isMelee = myHeld and myHeld.IsMelee
+		if AIM.HoldToAim and not holding and not isMelee then return false end
 		return aliveHumanoid(player.Character) ~= nil
 	end
 
@@ -4025,7 +4029,9 @@ local function setupAim()
 		if isMobileDevice() then
 			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil
 		else
-			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil and (not AIM.HoldToAim or holding)
+			local myHeld = WeaponDetector.GetHeldItem(player.Character)
+			local isMelee = myHeld and myHeld.IsMelee
+			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil and (not AIM.HoldToAim or holding or isMelee)
 		end
 
 		local prevTarget = lockedTarget
