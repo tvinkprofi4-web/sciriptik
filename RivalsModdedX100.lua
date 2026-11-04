@@ -3884,20 +3884,19 @@ local function setupAim()
 		return newLook
 	end
 
-	local mouseFrozen, savedSensitivity = false, 1
+	local mouseFrozen = false
+	local savedSensitivity = nil
 	freezeMouse = function(frozen)
-		if frozen == mouseFrozen then
-			return
-		end
+		if frozen == mouseFrozen then return end
 		pcall(function()
 			if frozen then
-				local current = UserInputService.MouseDeltaSensitivity
-				if current > 0 then
-					savedSensitivity = current
+				if savedSensitivity == nil then
+					savedSensitivity = UserInputService.MouseDeltaSensitivity
 				end
 				UserInputService.MouseDeltaSensitivity = 0
-			elseif UserInputService.MouseDeltaSensitivity == 0 then
+			elseif savedSensitivity ~= nil then
 				UserInputService.MouseDeltaSensitivity = savedSensitivity
+				savedSensitivity = nil
 			end
 		end)
 		mouseFrozen = frozen
@@ -4006,16 +4005,6 @@ local function setupAim()
 		return CFrame.Angles(math.rad(pitch), math.rad(yaw), 0)
 	end
 
-	local function restoreMouseToCamera(cam)
-		if isMobileDevice() then return end
-		if not (mousemoveabs or mousemoverel) then return end
-		local vs = cam.ViewportSize
-		local center = Vector2.new(vs.X / 2, vs.Y / 2)
-		pcall(function()
-			if mousemoveabs then mousemoveabs(center.X, center.Y) end
-		end)
-	end
-
 	RunService:BindToRenderStep("AimMain", Enum.RenderPriority.Camera.Value - 1, function(dt)
 		local cam = workspace.CurrentCamera
 		if not cam then return end
@@ -4050,7 +4039,6 @@ local function setupAim()
 			freezeMouse(false)
 			releaseBody()
 			targetInfo.Visible = false
-			restoreMouseToCamera(cam)
 			return
 		end
 
