@@ -2389,6 +2389,7 @@ local function setupAim()
 	local function isMobileDevice()
 		if AIM.DeviceMode == "Mobile" then return true end
 		if AIM.DeviceMode == "PC" then return false end
+		if UserInputService.MouseEnabled then return false end
 		if UserInputService.TouchEnabled then return true end
 		return isMobile or (playerGui:FindFirstChild("TouchGui") ~= nil)
 	end
@@ -2556,7 +2557,6 @@ local function setupAim()
 	end
 
 	toggleBtn.Activated:Connect(function()
-		isMobile = true
 		toggleAim()
 	end)
 
@@ -2703,6 +2703,7 @@ local function setupAim()
 			local k, v = string.match(pair, "^%s*([%w_]+)%s*=%s*(.-)%s*$")
 			if k == "enabled" then
 				if v == "1" or v == "0" then
+					enabled = (v == "1")
 					applied += 1
 				end
 			elseif k and table.find(SAVE_KEYS, k) then
@@ -3383,7 +3384,7 @@ local function setupAim()
 		knife = true, blade = true, katana = true, sword = true, dagger = true,
 		scythe = true, axe = true, machete = true, karambit = true, butterfly = true,
 		bat = true, crowbar = true, hammer = true, fists = true, melee = true,
-		balisong = true, combat = true, pocket = true, trench = true,
+		balisong = true, pocket = true,
 	}
 
 	local function isNameMelee(name)
@@ -3590,7 +3591,8 @@ local function setupAim()
 		if (holding or isMobileDevice()) and AIM.HoldThroughWalls then return true end
 		local origin = cam.CFrame.Position
 		local dir = part.Position - origin
-		local ignore = { player.Character, cam }
+		local ignore = { cam }
+		if player.Character then table.insert(ignore, player.Character) end
 
 		for _, child in ipairs(workspace:GetChildren()) do
 			if child:IsA("Model") and (string.find(string.lower(child.Name), "view") or string.find(string.lower(child.Name), "arm")) then
@@ -3734,7 +3736,6 @@ local function setupAim()
 	local function checkTarget(cam, t, center, maxDist)
 		local char = t.char
 		if not char.Parent or not aliveHumanoid(char) then return nil end
-		if char:FindFirstChildOfClass("ForceField") then return nil end
 		if AIM.TeamCheck and isTeammate(t.plr) then return nil end
 
 		local part = getAimPart(char)
@@ -4009,6 +4010,12 @@ local function setupAim()
 		return CFrame.Angles(math.rad(pitch), math.rad(yaw), 0)
 	end
 
+	local function isRmbDown()
+		if holding then return true end
+		local ok, pressed = pcall(UserInputService.IsMouseButtonPressed, UserInputService, Enum.UserInputType.MouseButton2)
+		return ok and pressed or false
+	end
+
 	RunService:BindToRenderStep("AimMain", Enum.RenderPriority.Camera.Value - 1, function(dt)
 		local cam = workspace.CurrentCamera
 		if not cam then return end
@@ -4031,7 +4038,8 @@ local function setupAim()
 		else
 			local myHeld = WeaponDetector.GetHeldItem(player.Character)
 			local isMelee = myHeld and myHeld.IsMelee
-			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil and (not AIM.HoldToAim or holding or isMelee)
+			local rmb = isRmbDown()
+			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil and (not AIM.HoldToAim or rmb or isMelee)
 		end
 
 		local prevTarget = lockedTarget
@@ -4071,7 +4079,7 @@ local function setupAim()
 			AIM.WallCheck = saved
 		end
 
-		if bodyAllowed then
+		if bodyAllowed and isMobileDevice() then
 			local noise = humanNoise(dt)
 			local noisyLook = (CFrame.new(Vector3.zero, bodyLook) * noise).LookVector
 			turnBodyTo(noisyLook)
@@ -4092,6 +4100,15 @@ local function setupAim()
 			targetInfo.Visible = true
 		else
 			targetInfo.Visible = false
+		end
+	end)
+
+	RunService:BindToRenderStep("AimCameraOverride", Enum.RenderPriority.Last.Value, function()
+		if AIM.AimMode ~= "Override" then return end
+		if not lockedPart or not aimLook then return end
+		local cam = workspace.CurrentCamera
+		if cam then
+			cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
 		end
 	end)
 
