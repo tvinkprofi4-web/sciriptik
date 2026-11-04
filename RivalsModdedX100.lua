@@ -2342,6 +2342,10 @@ local function setupAim()
 		AimHeight = 0.2,
 		FreezeMouse = true,
 		TurnBody = true,
+		AntiSpectate = true,
+		BodyMaxSpeed = 540,
+		BodyResponsiveness = 25,
+		BodyOnlyWhenVisible = true,
 		ESP = true,
 		ESPHighlight = true,
 		ESPNames = true,
@@ -3920,12 +3924,84 @@ local function setupAim()
 		return diagnoseText
 	end
 
-	-- PC camera bind and ESP update
+	-- [[ МОДУЛЬ ПОВОРОТА ТЕЛА (AlignOrientation) ]]
+	local BodyTurn = { Align = nil, Active = false, Hum = nil, SavedAutoRotate = nil }
+
+	local function ensureBodyAlign()
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hrp or not hum then return nil end
+		if BodyTurn.Align and BodyTurn.Align.Parent == hrp then return BodyTurn.Align, hrp end
+
+		local attach = hrp:FindFirstChild("AimRootAttachment") or Instance.new("Attachment", hrp)
+		attach.Name = "AimRootAttachment"
+		local align = hrp:FindFirstChild("AimAlign") or Instance.new("AlignOrientation", hrp)
+		align.Name = "AimAlign"
+		align.Mode = Enum.OrientationAlignmentMode.OneAttachment
+		align.Attachment0 = attach
+		align.MaxTorque = 60000
+		align.MaxAngularVelocity = math.rad(AIM.BodyMaxSpeed or 540)
+		align.Responsiveness = AIM.BodyResponsiveness or 25
+		align.RigidityEnabled = false
+		align.Enabled = false
+		
+		BodyTurn.Align = align
+		BodyTurn.Hum = hum
+		return align, hrp
+	end
+
+	releaseBody = function()
+		if not BodyTurn.Active then return end
+		BodyTurn.Active = false
+		if BodyTurn.Align and BodyTurn.Align.Parent then BodyTurn.Align.Enabled = false end
+		if BodyTurn.Hum and BodyTurn.Hum.Parent and BodyTurn.SavedAutoRotate ~= nil then
+			BodyTurn.Hum.AutoRotate = BodyTurn.SavedAutoRotate
+		end
+		BodyTurn.SavedAutoRotate = nil
+	end
+
+	local function turnBodyTo(look)
+		if not AIM.TurnBody then releaseBody(); return end
+		local flat = Vector3.new(look.X, 0, look.Z)
+		if flat.Magnitude < 0.05 then return end
+		
+		local align = ensureBodyAlign()
+		if not align then return end
+		if not BodyTurn.Active then
+			BodyTurn.Active = true
+			BodyTurn.SavedAutoRotate = BodyTurn.Hum.AutoRotate
+			BodyTurn.Hum.AutoRotate = false
+		end
+		align.MaxAngularVelocity = math.rad(AIM.BodyMaxSpeed or 540)
+		align.Responsiveness = AIM.BodyResponsiveness or 25
+		align.CFrame = CFrame.lookAt(Vector3.zero, flat.Unit)
+		align.Enabled = true
+	end
+
+	local noiseClock = 0
+	local function humanNoise(dt)
+		noiseClock += dt
+		local t = noiseClock
+		local yaw = math.sin(t * 7.3) * 0.6 + math.sin(t * 13.7) * 0.35
+		local pitch = math.sin(t * 5.1) * 0.3
+		return CFrame.Angles(math.rad(pitch), math.rad(yaw), 0)
+	end
+
+	local function restoreMouseToCamera(cam)
+		if isMobileDevice() then return end
+		if not (mousemoveabs or mousemoverel) then return end
+		local vs = cam.ViewportSize
+		local center = Vector2.new(vs.X / 2, vs.Y / 2)
+		pcall(function()
+			if mousemoveabs then mousemoveabs(center.X, center.Y) end
+		end)
+	end
+
 	RunService:BindToRenderStep("AimMain", Enum.RenderPriority.Camera.Value - 1, function(dt)
 		local cam = workspace.CurrentCamera
 		if not cam then return end
 
-		-- [[ NO CAMERA SHAKE (SAFE) ]]
 		if AIM.NoCameraShake then
 			local myChar = player.Character
 			local hum = myChar and myChar:FindFirstChildOfClass("Humanoid")
@@ -3936,241 +4012,81 @@ local function setupAim()
 
 		local targets = getTargets()
 		updateESP(cam, targets)
+		if circle.Visible then circle.Position = UDim2.fromScale(0.5, 0.5) end
 
-		if circle.Visible then
-			circle.Position = UDim2.fromScale(0.5, 0.5)
+		local wantAim
+		if isMobileDevice() then
+			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil
+		else
+			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil and (not AIM.HoldToAim or holding)
 		end
 
-		if not isMobileDevice() then
-			if AIM.AimMode == "Override" and aimLook then
-				cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
-			end
+		local prevTarget = lockedTarget
+		local newPart, newTarget = nil, nil
+		if wantAim then newPart, newTarget = getClosestTarget(cam, targets, prevTarget) end
+		lockedPart, lockedTarget = newPart, newTarget
 
-			local prevTarget = lockedTarget
-			lockedPart, lockedTarget = nil, nil
-			if wantsAim() then
-				lockedPart, lockedTarget = getClosestTarget(cam, targets, prevTarget)
-			end
-			if not lockedPart then
-				prevWant, prevChar = nil, nil
-			end
-			player:SetAttribute("AimPoint", lockedPart and aimPosition(lockedPart) or nil)
-			freezeMouse(lockedPart ~= nil and AIM.FreezeMouse)
-
-			if lockedTarget and AIM.ShowTargetInfo then
-				local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-				local d = myRoot and math.floor((lockedPart.Position - myRoot.Position).Magnitude + 0.5) or 0
-				local enemyWeapon = WeaponDetector.GetHeldItem(lockedTarget.char)
-				local weaponInfo = enemyWeapon and (" [" .. enemyWeapon.Name .. "]") or ""
-				targetInfo.Text = trf("?? %s%s    %d m", lockedTarget.name, weaponInfo, d)
-				targetInfo.TextColor3 = COLORS.enemy
-				targetInfo.Visible = true
-			else
-				targetInfo.Visible = false
-			end
-
-			if lockedPart and AIM.AimMode == "Override" then
-				local want = wantedLook(cam, lockedPart)
-				aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
-				cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
-			elseif lockedPart then
-				aimLook = nil
-				local camPos = cam.CFrame.Position
-				local want = wantedLook(cam, lockedPart)
-				local look = trackLook(cam.CFrame.LookVector, want, dt)
-				cam.CFrame = lookCFrame(camPos, look)
-			else
-				aimLook = nil
-			end
-		end
-	end)
-
-	-- [[ МОБИЛЬНЫЙ АИМ v3 (FOV, угол, кэш, плавность) ]]
-	local mobileLastScan = 0
-	local mobileCachedTargets = {}
-	local mobileRayParams = RaycastParams.new()
-	mobileRayParams.FilterType = Enum.RaycastFilterType.Exclude
-
-	local function getMobileTargets()
-		if os.clock() - mobileLastScan < 0.1 then
-			return mobileCachedTargets
-		end
-		mobileLastScan = os.clock()
-		local list = {}
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-				local head = plr.Character:FindFirstChild("Head")
-				if hum and hum.Health > 0 and head then
-					if not (AIM.TeamCheck and isTeammate(plr)) then
-						table.insert(list, { char = plr.Character, plr = plr, head = head, hum = hum })
-					end
-				end
-			end
-		end
-		mobileCachedTargets = list
-		return list
-	end
-
-	RunService.RenderStepped:Connect(function()
-		if not hasPass or not enabled or menuVisible then return end
-		if not isMobileDevice() then return end
-		local cam = workspace.CurrentCamera
-		if not cam then return end
-
-		local myChar = player.Character
-		local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
-		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-		if not myHum or myHum.Health <= 0 or not myRoot then return end
-
-		local camPos = cam.CFrame.Position
-		local camLook = cam.CFrame.LookVector
-		local vs = cam.ViewportSize
-		local center = Vector2.new(vs.X / 2, vs.Y / 2)
-		local fovScale = vs.Y / math.max(hud.AbsoluteSize.Y, 1)
-		local maxFov = AIM.FOV * fovScale
-
-		local bestPart, bestDist = nil, math.huge
-		for _, t in ipairs(getMobileTargets()) do
-			local headPos = t.head.Position
-			local sp, onScreen = cam:WorldToViewportPoint(headPos)
-			if onScreen then
-				local screenDist = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-				if screenDist < maxFov and screenDist < bestDist then
-					local dir = (headPos - camPos).Unit
-					local angle = math.deg(math.acos(math.clamp(camLook:Dot(dir), -1, 1)))
-					if angle <= 45 then
-						local visible = true
-						if AIM.WallCheck then
-							mobileRayParams.FilterDescendantsInstances = { myChar, cam }
-							local result = workspace:Raycast(camPos, headPos - camPos, mobileRayParams)
-							if result and not result.Instance:IsDescendantOf(t.char) then
-								visible = false
-							end
-						end
-						if visible then
-							bestPart, bestDist = t.head, screenDist
-						end
-					end
-				end
-			end
-		end
-
-		if bestPart then
-			local targetPos = bestPart.Position
-			if AIM.Prediction > 0 then
-				local root = bestPart.Parent and bestPart.Parent:FindFirstChild("HumanoidRootPart")
-				if root then
-					targetPos = targetPos + root.AssemblyLinearVelocity * AIM.Prediction
-				end
-			end
-			local want = CFrame.lookAt(camPos, targetPos)
-			local alpha = AIM.InstantSnap and 1 or math.clamp(AIM.Smoothness, 0.05, 1)
-			cam.CFrame = cam.CFrame:Lerp(want, alpha)
-
-			if AIM.TurnBody then
-				local flat = Vector3.new(targetPos.X - myRoot.Position.X, 0, targetPos.Z - myRoot.Position.Z)
-				if flat.Magnitude > 0.1 then
-					local bodyWant = CFrame.lookAt(myRoot.Position, myRoot.Position + flat.Unit)
-					myRoot.CFrame = myRoot.CFrame:Lerp(bodyWant, alpha)
-				end
-			end
-
-			if AIM.AutoShoot ~= "Off" then
-				local tool = myChar:FindFirstChildOfClass("Tool")
-				if tool then
-					local dir = (targetPos - camPos).Unit
-					local angle = math.deg(math.acos(math.clamp(cam.CFrame.LookVector:Dot(dir), -1, 1)))
-					if angle <= (AIM.AutoShootAngle or 10) then
-						tool:Activate()
-					end
-				end
-			end
-		end
-	end)
-
-	local function applyOverride(cam)
-		cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
-	end
-
-	-- Rivals mode: put the same aim direction back right after it (before weapon scripts)
-	-- and once more at the end of the frame.
-	RunService:BindToRenderStep("AimOverrideEarly", Enum.RenderPriority.Camera.Value + 1, function()
-		if AIM.AimMode ~= "Override" or not lockedPart or not aimLook then
-			return
-		end
-		local cam = workspace.CurrentCamera
-		if cam then
-			applyOverride(cam)
-		end
-	end)
-
-	RunService:BindToRenderStep("AimOverride", Enum.RenderPriority.Last.Value, function()
-		if AIM.AimMode ~= "Override" or not lockedPart or not aimLook then
-			return
-		end
-		local cam = workspace.CurrentCamera
-		if cam then
-			applyOverride(cam)
-		end
-	end)
-
-	RunService.RenderStepped:Connect(function()
-		if AIM.AimMode == "Override" and aimLook and lockedPart then
-			local cam = workspace.CurrentCamera
-			if cam then
-				applyOverride(cam)
-			end
-		end
-	end)
-
-	-- FIX: turn the character's body to the aim direction while a target is locked.
-	local bodyTurned, savedAutoRotate, turnedHumanoid = false, nil, nil
-
-	releaseBody = function()
-		if not bodyTurned then
-			return
-		end
-		bodyTurned = false
-		if turnedHumanoid and turnedHumanoid.Parent and savedAutoRotate ~= nil then
-			turnedHumanoid.AutoRotate = savedAutoRotate
-		end
-		turnedHumanoid, savedAutoRotate = nil, nil
-	end
-
-	local function turnBody(look)
-		local char = player.Character
-		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if not (root and hum) or hum.Sit then
+		if not lockedPart then
+			prevWant, prevChar = nil, nil
+			aimLook = nil
+			freezeMouse(false)
 			releaseBody()
+			targetInfo.Visible = false
+			restoreMouseToCamera(cam)
 			return
 		end
-		local flat = Vector3.new(look.X, 0, look.Z)
-		if flat.Magnitude < 1e-3 then
-			return
-		end
-		if not bodyTurned or turnedHumanoid ~= hum then
-			releaseBody()
-			bodyTurned = true
-			turnedHumanoid = hum
-			savedAutoRotate = hum.AutoRotate
-		end
-		hum.AutoRotate = false
-		local pos = root.Position
-		root.CFrame = CFrame.lookAt(pos, pos + flat.Unit)
-	end
 
-	RunService:BindToRenderStep("AimTurnBody", Enum.RenderPriority.Last.Value + 2, function()
-		local cam = workspace.CurrentCamera
-		if not (cam and lockedPart and AIM.TurnBody) then
-			releaseBody()
-			return
+		lockSeenAt = os.clock()
+
+		if AIM.AimMode == "Override" then
+			local want = wantedLook(cam, lockedPart)
+			aimLook = trackLook(aimLook or cam.CFrame.LookVector, want, dt)
+			cam.CFrame = lookCFrame(cam.CFrame.Position, aimLook)
+		else
+			local camPos = cam.CFrame.Position
+			local want = wantedLook(cam, lockedPart)
+			local look = trackLook(cam.CFrame.LookVector, want, dt)
+			cam.CFrame = lookCFrame(camPos, look)
+			aimLook = look
 		end
-		turnBody(aimLook or cam.CFrame.LookVector)
+
+		local bodyLook = aimLook or cam.CFrame.LookVector
+		local bodyAllowed = true
+		if AIM.AntiSpectate or AIM.BodyOnlyWhenVisible then
+			local saved = AIM.WallCheck
+			AIM.WallCheck = true
+			bodyAllowed = isVisible(cam, lockedPart, lockedTarget.char)
+			AIM.WallCheck = saved
+		end
+
+		if bodyAllowed then
+			local noise = humanNoise(dt)
+			local noisyLook = (CFrame.new(Vector3.zero, bodyLook) * noise).LookVector
+			turnBodyTo(noisyLook)
+		else
+			releaseBody()
+		end
+
+		player:SetAttribute("AimPoint", aimPosition(lockedPart))
+		freezeMouse(AIM.FreezeMouse)
+
+		if AIM.ShowTargetInfo then
+			local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			local d = myRoot and math.floor((lockedPart.Position - myRoot.Position).Magnitude + 0.5) or 0
+			local enemyWeapon = WeaponDetector.GetHeldItem(lockedTarget.char)
+			local weaponInfo = enemyWeapon and (" [" .. enemyWeapon.Name .. "]") or ""
+			targetInfo.Text = trf("?? %s%s    %d m", lockedTarget.name, weaponInfo, d)
+			targetInfo.TextColor3 = COLORS.enemy
+			targetInfo.Visible = true
+		else
+			targetInfo.Visible = false
+		end
 	end)
+
 	player.CharacterAdded:Connect(function()
-		bodyTurned, savedAutoRotate, turnedHumanoid = false, nil, nil
+		releaseBody()
+		BodyTurn.Align = nil
+		BodyTurn.Hum = nil
 		task.defer(updateAutoRotate)
 	end)
 	gui.Destroying:Connect(releaseBody)
