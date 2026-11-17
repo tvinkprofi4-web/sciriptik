@@ -6,8 +6,6 @@ local Lighting = game:GetService("Lighting")
 
 -- [[ ПРОВЕРКА ИГРЫ: ТОЛЬКО ДЛЯ RIVALS / GAME VALIDATION ]]
 local function isRivalsGame()
-	-- Universe ID: 6035872082 (все карты, арены 1v1, лобби)
-	-- Place ID: 17625359962 (основное лобби)
 	if game.GameId == 6035872082 or game.PlaceId == 17625359962 then
 		return true
 	end
@@ -21,10 +19,10 @@ local function isRivalsGame()
 end
 
 if not isRivalsGame() then
-	warn("[RIVALS MODDED] Скрипт предназначен только для игры RIVALS!")
+	warn("[SNOW HUB] Скрипт предназначен только для игры RIVALS!")
 	pcall(function()
 		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "RIVALS MENU",
+			Title = "SNOW HUB",
 			Text = "Этот скрипт работает только в RIVALS!",
 			Duration = 6
 		})
@@ -41,10 +39,10 @@ end
 local camera = workspace.CurrentCamera
 
 local CONFIG = {
-	Title = string.upper(player.Name) .. " MENU",
-	Logo = "W",
+	Title = "SNOW HUB",
+	Logo = "❄",
 	Author = "by " .. player.Name,
-	Version = "Version 7.0",
+	Version = "Version 7.1",
 	ToggleKey = Enum.KeyCode.G,
 	Theme = "Pumpkin",
 	AutoThemeDelay = 6,
@@ -226,9 +224,9 @@ local LANGUAGES = {
 	{ "fr", "Français" },
 }
 
-local INFO_ABOUT = "A menu for your game: aim, ESP, themes, settings and your profile.\nAim assist, auto-shoot and saved settings — Aim tab (needs the GamePass)\nPlayers through walls, names, distance, health — ESP tab\n%d themes and Auto Theme — Themes tab\nLanguage, blur, transparency, border, notifications and the menu key — Settings tab\nYour avatar, account age and time in the menu — Profile tab"
-local HOW_TO = "Press %s or the W button on the left to hide or show the menu. Drag the window by its top bar. Aim and ESP are on their own tabs, colors on the Themes tab, language and menu settings on the Settings tab."
-local KEYS_TEXT = "%s or the W button on the left — hide / show the menu\n— minimize, □ maximize, × hide\nDrag the window by its top bar, drag the W button anywhere"
+local INFO_ABOUT = "Snow Hub menu: aim, ESP, themes, settings and your profile.\nAim assist, auto-shoot and saved settings — Aim tab (needs the GamePass)\nPlayers through walls, names, distance, health — ESP tab\n%d themes and Auto Theme — Themes tab\nLanguage, blur, transparency, border, notifications and the menu key — Settings tab\nYour avatar, account age and time in the menu — Profile tab"
+local HOW_TO = "Press %s or the ❄ button on the left to hide or show the menu. Drag the window by its top bar. Aim and ESP are on their own tabs, colors on the Themes tab, language and menu settings on the Settings tab."
+local KEYS_TEXT = "%s or the ❄ button on the left — hide / show the menu\n— minimize, □ maximize, × hide\nDrag the window by its top bar, drag the ❄ button anywhere"
 
 local TEXTS = {
 	["Search..."] = { ru = "Поиск...", gd = "Lorg...", fr = "Rechercher..." },
@@ -236,19 +234,19 @@ local TEXTS = {
 	["%d days"] = { ru = "%d дн.", gd = "%d latha", fr = "%d jours" },
 	["Press a key..."] = { ru = "Нажми клавишу...", gd = "Brùth iuchair...", fr = "Appuie sur une touche..." },
 	["Hello, %s!"] = { ru = "Привет, %s!", gd = "Halò, %s!", fr = "Salut, %s !" },
-	["Happy Halloween"] = { ru = "С Хэллоуином", gd = "Oidhche Shamhna shona", fr = "Joyeux Halloween" },
+	["Snow Hub"] = { ru = "Snow Hub", gd = "Snow Hub", fr = "Snow Hub" },
 	["by %s"] = { ru = "от %s", gd = "le %s", fr = "par %s" },
 	["Home"] = { ru = "Главная", gd = "Dachaigh", fr = "Accueil" },
 	["Welcome!"] = { ru = "Добро пожаловать!", gd = "Fàilte!", fr = "Bienvenue !" },
-	["until Halloween"] = { ru = "до Хэллоуина", gd = "gu Oidhche Shamhna", fr = "avant Halloween" },
+	["until winter"] = { ru = "до зимы", gd = "gu geamhradh", fr = "avant l'hiver" },
 	["toggle menu"] = { ru = "открыть меню", gd = "clàr-taice", fr = "ouvrir le menu" },
 	["menu theme"] = { ru = "тема меню", gd = "ùrlar a' chlàir", fr = "thème du menu" },
 	["Quick start"] = { ru = "Быстрый старт", gd = "Tòiseachadh luath", fr = "Démarrage rapide" },
 	["How to use"] = { ru = "Как пользоваться", gd = "Mar a chleachdas tu e", fr = "Comment l'utiliser" },
 	[HOW_TO] = {
-		ru = "Нажми %s или кнопку W слева, чтобы открыть или спрятать меню. Окно можно двигать за верхнюю полосу. Аим и ESP — на своих вкладках, цвета — во вкладке «Темы», язык и меню — во вкладке «Настройки».",
-		gd = "Brùth %s no am putan W air an taobh chlì gus an clàr-taice a shealltainn no fhalach. Slaod an uinneag leis a' bhàr aig a' mhullach. Tha Amas is ESP air na tabaichean aca fhèin, dathan air an tab Ùrlaran, cànan is roghainnean a' chlàir air an tab Roghainnean.",
-		fr = "Appuie sur %s ou sur le bouton W à gauche pour afficher ou cacher le menu. Déplace la fenêtre par sa barre du haut. Visée et ESP ont leurs propres onglets, les couleurs sont dans Thèmes, la langue et le menu dans Paramètres.",
+		ru = "Нажми %s или кнопку ❄ слева, чтобы открыть или спрятать меню. Окно можно двигать за верхнюю полосу. Аим и ESP — на своих вкладках, цвета — во вкладке «Темы», язык и меню — во вкладке «Настройки».",
+		gd = "Brùth %s no am putan ❄ air an taobh chlì gus an clàr-taice a shealltainn no fhalach. Slaod an uinneag leis a' bhàr aig a' mhullach. Tha Amas is ESP air na tabaichean aca fhèin, dathan air an tab Ùrlaran, cànan is roghainnean a' chlàir air an tab Roghainnean.",
+		fr = "Appuie sur %s ou sur le bouton ❄ à gauche pour afficher ou cacher le menu. Déplace la fenêtre par sa barre du haut. Visée et ESP ont leurs propres onglets, les couleurs sont dans Thèmes, la langue et le menu dans Paramètres.",
 	},
 
 	["AIM: BUY"] = { ru = "АИМ: КУПИТЬ", gd = "AMAS: CEANNAICH", fr = "VISÉE : ACHETER" },
@@ -381,9 +379,9 @@ local TEXTS = {
 	["%s stays on"] = { ru = "Остаётся %s", gd = "Fanaidh %s air", fr = "%s reste activé" },
 
 	[KEYS_TEXT] = {
-		ru = "%s или кнопка W слева — открыть / спрятать меню\n— свернуть, □ развернуть, × спрятать\nОкно двигается за верхнюю полосу, кнопку W можно перетащить куда угодно",
-		gd = "%s no am putan W air an taobh chlì — seall / falaich an clàr-taice\n— lùghdaich, □ meudaich, × falaich\nSlaod an uinneag leis a' bhàr aig a' mhullach, slaod am putan W gu àite sam bith",
-		fr = "%s ou le bouton W à gauche — afficher / cacher le menu\n— réduire, □ agrandir, × cacher\nDéplace la fenêtre par sa barre du haut, et le bouton W où tu veux",
+		ru = "%s или кнопка ❄ слева — открыть / спрятать меню\n— свернуть, □ развернуть, × спрятать\nОкно двигается за верхнюю полосу, кнопку ❄ можно перетащить куда угодно",
+		gd = "%s no am putan ❄ air an taobh chlì — seall / falaich an clàr-taice\n— lùghdaich, □ meudaich, × falaich\nSlaod an uinneag leis a' bhàr aig a' mhullach, slaod am putan ❄ gu àite sam bith",
+		fr = "%s ou le bouton ❄ à gauche — afficher / cacher le menu\n— réduire, □ agrandir, × cacher\nDéplace la fenêtre par sa barre du haut, et le bouton ❄ où tu veux",
 	},
 	["Key changed"] = { ru = "Клавиша изменена", gd = "Chaidh an iuchair atharrachadh", fr = "Touche changée" },
 	["New key: %s"] = { ru = "Новая клавиша: %s", gd = "Iuchair ùr: %s", fr = "Nouvelle touche : %s" },
@@ -419,12 +417,12 @@ local TEXTS = {
 	["Keys and buttons"] = { ru = "Клавиши и кнопки", gd = "Iuchraichean is putanan", fr = "Touches et boutons" },
 	["What's inside"] = { ru = "Что внутри", gd = "Na tha na bhroinn", fr = "Contenu" },
 	[INFO_ABOUT] = {
-		ru = "Меню для твоей игры: аим, ESP, темы, настройки и профиль.\nНаводка, автострел и сохранение настроек — вкладка «Аим» (нужен геймпасс)\nИгроки сквозь стены, ники, расстояние, здоровье — вкладка ESP\n%d тем и автосмена темы — вкладка «Темы»\nЯзык, размытие, прозрачность, рамка, уведомления и клавиша меню — вкладка «Настройки»\nАватар, возраст аккаунта и время в меню — вкладка «Профиль»",
-		gd = "Clàr-taice airson do gheama: amas, ESP, ùrlaran, roghainnean is do phròifil.\nTaic amais, fèin-losgadh is roghainnean air an sàbhaladh — tab Amas (feumaidh e an GamePass)\nCluicheadairean tro bhallachan, ainmean, astar, slàinte — tab ESP\n%d ùrlaran is ùrlar fèin-ghluasadach — tab Ùrlaran\nCànan, sgleò, trìd-shoilleireachd, iomall, brathan is iuchair a' chlàir — tab Roghainnean\nDo dhealbh, aois a' chunntais is ùine sa chlàr-taice — tab Pròifil",
-		fr = "Un menu pour ton jeu : visée, ESP, thèmes, paramètres et profil.\nAide à la visée, tir auto et paramètres sauvegardés — onglet Visée (GamePass requis)\nJoueurs à travers les murs, noms, distance, vie — onglet ESP\n%d thèmes et thème auto — onglet Thèmes\nLangue, flou, transparence, bordure, notifications et touche du menu — onglet Paramètres\nTon avatar, l'âge du compte et le temps dans le menu — onglet Profil",
+		ru = "Snow Hub меню: аим, ESP, темы, настройки и профиль.\nНаводка, автострел и сохранение настроек — вкладка «Аим» (нужен геймпасс)\nИгроки сквозь стены, ники, расстояние, здоровье — вкладка ESP\n%d тем и автосмена темы — вкладка «Темы»\nЯзык, размытие, прозрачность, рамка, уведомления и клавиша меню — вкладка «Настройки»\nАватар, возраст аккаунта и время в меню — вкладка «Профиль»",
+		gd = "Clàr-taice Snow Hub: amas, ESP, ùrlaran, roghainnean is do phròifil.\nTaic amais, fèin-losgadh is roghainnean air an sàbhaladh — tab Amas (feumaidh e an GamePass)\nCluicheadairean tro bhallachan, ainmean, astar, slàinte — tab ESP\n%d ùrlaran is ùrlar fèin-ghluasadach — tab Ùrlaran\nCànan, sgleò, trìd-shoilleireachd, iomall, brathan is iuchair a' chlàir — tab Roghainnean\nDo dhealbh, aois a' chunntais is ùine sa chlàr-taice — tab Pròifil",
+		fr = "Un menu Snow Hub : visée, ESP, thèmes, paramètres et profil.\nAide à la visée, tir auto et paramètres sauvegardés — onglet Visée (GamePass requis)\nJoueurs à travers les murs, noms, distance, vie — onglet ESP\n%d thèmes et thème auto — onglet Thèmes\nLangue, flou, transparence, bordure, notifications et touche du menu — onglet Paramètres\nTon avatar, l'âge du compte et le temps dans le menu — onglet Profil",
 	},
 	["Menu hidden"] = { ru = "Меню спрятано", gd = "Chaidh an clàr-taice fhalach", fr = "Menu caché" },
-	["Press %s or the W button on the left"] = { ru = "Нажми %s или кнопку W слева", gd = "Brùth %s no am putan W air an taobh chlì", fr = "Appuie sur %s ou sur le bouton W à gauche" },
+	["Press %s or the ❄ button on the left"] = { ru = "Нажми %s или кнопку ❄ слева", gd = "Brùth %s no am putan ❄ air an taobh chlì", fr = "Appuie sur %s ou sur le bouton ❄ à gauche" },
 	["Welcome, %s!"] = { ru = "Добро пожаловать, %s!", gd = "Fàilte, %s!", fr = "Bienvenue, %s !" },
 	["Press %s to hide the menu"] = { ru = "Нажми %s, чтобы спрятать меню", gd = "Brùth %s gus an clàr-taice fhalach", fr = "Appuie sur %s pour cacher le menu" },
 	["Loading theme..."] = { ru = "Загрузка темы...", gd = "A' luchdadh an ùrlair...", fr = "Chargement du thème..." },
@@ -604,15 +602,6 @@ local function staticAccent(parent, rotation)
 	})
 end
 
-local function removeFrom(list, item)
-	for index, value in ipairs(list) do
-		if value == item then
-			table.remove(list, index)
-			return
-		end
-	end
-end
-
 local function isPress(input)
 	return input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch
@@ -665,7 +654,6 @@ end
 
 local spinningGradients = {}
 local shimmerGradients = {}
-local swingers = {}
 
 local function accent(parent, rotation, spinning)
 	local gradient = paintGradient(create("UIGradient", { Rotation = rotation or 0, Parent = parent }), "Accent", "Accent2")
@@ -694,7 +682,7 @@ local function shimmer(textObject)
 	return gradient
 end
 
-local GUI_NAME = "RivalsModded_Unique_v7"
+local GUI_NAME = "SnowHub_v7.1"
 
 local function getSafeGuiParent()
 	local okHui, hui = pcall(function() return gethui and gethui() end)
@@ -927,15 +915,6 @@ state.freeMouse = create("TextButton", {
 	AutoButtonColor = false,
 	Parent = main,
 })
-
-local shine = create("Frame", {
-	Size = UDim2.new(1, 0, 0, 150),
-	BackgroundColor3 = COMMON.White,
-	BackgroundTransparency = 0.94,
-	ZIndex = 1,
-	Parent = main,
-})
-create("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(0, 1), Parent = shine })
 
 local topBar = create("Frame", {
 	Name = "TopBar",
@@ -1703,12 +1682,12 @@ local function setMaximized(value)
 	state.keepWindowOnScreen(0.45)
 end
 
-local function halloweenCountdown()
+local function winterCountdown()
 	local now = os.date("*t")
 	local today = os.time({ year = now.year, month = now.month, day = now.day, hour = 12 })
-	local target = os.time({ year = now.year, month = 10, day = 31, hour = 12 })
+	local target = os.time({ year = now.year, month = 12, day = 1, hour = 12 })
 	if target < today then
-		target = os.time({ year = now.year + 1, month = 10, day = 31, hour = 12 })
+		target = os.time({ year = now.year + 1, month = 12, day = 1, hour = 12 })
 	end
 	local days = math.floor((target - today) / 86400 + 0.5)
 	return days == 0 and tr("Today!") or trf("%d days", days)
@@ -2026,68 +2005,6 @@ end
 
 local bindingKey = false
 
-local function keybind(page, title, configKey, onChanged)
-	local frame = card(page, 58)
-	label({
-		Position = UDim2.fromOffset(18, 0),
-		Size = UDim2.new(1, -170, 1, 0),
-		Text = title,
-		Font = FONT_BOLD,
-		TextSize = 15,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Parent = frame,
-	})
-	local button = create("TextButton", {
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -14, 0.5, 0),
-		Size = UDim2.fromOffset(0, 32),
-		AutomaticSize = Enum.AutomaticSize.X,
-		BackgroundColor3 = THEME.Field,
-		AutoButtonColor = false,
-		Text = CONFIG[configKey].Name,
-		Font = FONT_BOLD,
-		TextSize = 14,
-		TextColor3 = COMMON.Text,
-		Parent = frame,
-	})
-	paint(button, "BackgroundColor3", "Field")
-	corner(button, 9)
-	padding(button, 0, 14, 0, 14)
-	local buttonStroke = stroke(button, 0.85, 1)
-
-	local waiting = false
-	button.MouseButton1Click:Connect(function()
-		if waiting then
-			return
-		end
-		waiting = true
-		bindingKey = true
-		button.Text = "Press a key..."
-		tween(buttonStroke, 0.2, { Color = THEME.Accent, Transparency = 0 })
-
-		local connection
-		connection = UserInputService.InputBegan:Connect(function(input)
-			if input.UserInputType ~= Enum.UserInputType.Keyboard then
-				return
-			end
-			connection:Disconnect()
-			waiting = false
-			local key = input.KeyCode
-			if key ~= Enum.KeyCode.Escape and key ~= Enum.KeyCode.Unknown then
-				CONFIG[configKey] = key
-				if onChanged then
-					onChanged(key)
-				end
-			end
-			button.Text = CONFIG[configKey].Name
-			tween(buttonStroke, 0.2, { Color = COMMON.White, Transparency = 0.85 })
-			task.delay(0.2, function()
-				bindingKey = false
-			end)
-		end)
-	end)
-end
-
 local function statGrid(page, items)
 	local grid = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
@@ -2185,7 +2102,7 @@ local function hero(page)
 	label({
 		Position = UDim2.fromOffset(20, 56),
 		Size = UDim2.new(1, -140, 0, 20),
-		Text = "Happy Halloween",
+		Text = "Snow Hub",
 		TextSize = 15,
 		TextColor3 = COMMON.White,
 		TextTransparency = 0.1,
@@ -2285,12 +2202,12 @@ end
 local homePage = createTab("Home", "★", "Welcome!")
 hero(homePage)
 local homeStats = statGrid(homePage, {
-	{ halloweenCountdown(), "until Halloween" },
+	{ winterCountdown(), "until winter" },
 	{ CONFIG.ToggleKey.Name, "toggle menu" },
 	{ "RIVALS", "Current place" },
 })
 table.insert(languageHooks, function()
-	homeStats[1].Text = halloweenCountdown()
+	homeStats[1].Text = winterCountdown()
 end)
 onTheme(function()
 	homeStats[3].Text = THEME.Name
@@ -2299,8 +2216,6 @@ section(homePage, "Quick start")
 local _, homeHowText = paragraph(homePage, "How to use", "")
 
 local function setupAim()
-	local wasAiming = false
-	local origSens = UserInputService.MouseDeltaSensitivity
 	local MarketplaceService = game:GetService("MarketplaceService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -2353,7 +2268,7 @@ local function setupAim()
 		ESPDistance = true,
 		ESPHealth = true,
 		ESPTracers = false,
-		ESPTeammates = false,
+		ESPTeammates = true, -- Свои теперь видны по умолчанию
 		ESPMaxDistance = 1500,
 		ToggleKey = Enum.KeyCode.F,
 		AimHoldButton = Enum.UserInputType.MouseButton2,
@@ -2406,8 +2321,6 @@ local function setupAim()
 		slimeDark = Color3.fromRGB(70, 150, 44),
 		red = Color3.fromRGB(190, 28, 44),
 		gold = Color3.fromRGB(255, 186, 64),
-		enemy = Color3.fromRGB(255, 96, 36),
-		team = Color3.fromRGB(130, 230, 255),
 	}
 
 	local function outline(inst, color, thickness, transparency)
@@ -2459,13 +2372,13 @@ local function setupAim()
 	local targetInfo = Instance.new("TextLabel")
 	targetInfo.Name = "TargetInfo"
 	targetInfo.AnchorPoint = Vector2.new(0.5, 0)
-	targetInfo.Position = UDim2.new(0.5, 0, 0, 14) -- Compact, clean at very top
-	targetInfo.Size = UDim2.fromOffset(0, 24) -- Sleek pill badge
+	targetInfo.Position = UDim2.new(0.5, 0, 0, 14)
+	targetInfo.Size = UDim2.fromOffset(0, 24)
 	targetInfo.BackgroundColor3 = Color3.fromRGB(16, 16, 24)
 	targetInfo.BackgroundTransparency = 0.25
 	targetInfo.Font = Enum.Font.GothamBold
 	targetInfo.TextSize = 13
-	targetInfo.TextColor3 = COLORS.enemy
+	targetInfo.TextColor3 = Color3.fromRGB(255, 45, 45)
 	targetInfo.Visible = false
 	targetInfo.AutomaticSize = Enum.AutomaticSize.X
 	targetInfo.Parent = hud
@@ -2473,7 +2386,7 @@ local function setupAim()
 	targetPad.PaddingLeft = UDim.new(0, 12)
 	targetPad.PaddingRight = UDim.new(0, 12)
 	targetPad.Parent = targetInfo
-	corner(targetInfo, 12) -- Pill rounded shape
+	corner(targetInfo, 12)
 	outline(targetInfo, COLORS.accent, 1, 0.4)
 
 	local function makeSideButton(name, posY)
@@ -2972,7 +2885,7 @@ local function setupAim()
 	end)
 	aimToggle(aimPage, "Keep Target", "Don't jump between players", "StickyTarget")
 	aimToggle(aimPage, "Hold Mouse On Target", "The mouse doesn't turn the camera and arm while locked", "FreezeMouse")
-	aimToggle(aimPage, "Turn Body To Target", "The character faces the enemy � no shooting with your back", "TurnBody")
+	aimToggle(aimPage, "Turn Body To Target", "The character faces the enemy — no shooting with your back", "TurnBody")
 	aimSlider(aimPage, "Keep After Cover", "LockGrace", 0, 1000, 1000, function(v)
 		return v .. " ms"
 	end)
@@ -3080,7 +2993,7 @@ local function setupAim()
 	local saveRemote = nil
 	local lastSaved = nil
 	local saveBusy = false
-	local CONFIG_FILE = "RivalsModded_Settings.cfg"
+	local CONFIG_FILE = "SnowHub_Settings.cfg"
 
 	local function saveLocalFile(str)
 		if writefile then
@@ -3114,10 +3027,7 @@ local function setupAim()
 		saveBusy = true
 		dirtyAt = nil
 
-		-- 1. Always save locally to file (persists across game joins / leaves!)
 		local savedLocally = saveLocalFile(code)
-
-		-- 2. If game server has AimBotConfig RemoteFunction, save there too
 		local savedRemotely = false
 		if saveRemote then
 			local ok, res = pcall(saveRemote.InvokeServer, saveRemote, "save", code)
@@ -3127,9 +3037,9 @@ local function setupAim()
 		saveBusy = false
 		if savedLocally or savedRemotely then
 			lastSaved = code
-			setStatus(trf("Saved at %s - next time they load by themselves", os.date("%H:%M")), COLORS.slime)
+			setStatus(trf("Saved at %s - next time they load by themselves", os.date("%H:%M")), COMMON.Green)
 		else
-			setStatus("Executor does not support writefile - cannot save locally", COLORS.gold)
+			setStatus("Executor does not support writefile - cannot save locally", COMMON.Close)
 		end
 	end
 	flushSave = saveNow
@@ -3140,25 +3050,23 @@ local function setupAim()
 	onSettingsChanged = function()
 		if persistReady then
 			dirtyAt = os.clock()
-			saveNow() -- Save immediately on any change!
+			saveNow()
 		end
 	end
 
 	task.spawn(function()
 		persistReady = true
 
-		-- First attempt: load from local persistent file (Delta, Fluxus, Synapse, etc.)
 		local localCode = readLocalFile()
 		if localCode and localCode ~= "" then
 			importCode(localCode)
 			setLanguage(AIM.Language)
 			applyConfig()
 			lastSaved = localCode
-			setStatus("Your settings are loaded - just like last time", COLORS.slime)
-			showToast("Your aim settings are loaded", COLORS.slime, 3)
+			setStatus("Your settings are loaded - just like last time", COMMON.Green)
+			showToast("Your aim settings are loaded", COMMON.Green, 3)
 		end
 
-		-- Also attempt to connect with AimBotConfig RemoteFunction if present
 		local remote = ReplicatedStorage:WaitForChild("AimBotConfig", 3)
 		if remote and remote:IsA("RemoteFunction") then
 			saveRemote = remote
@@ -3170,8 +3078,8 @@ local function setupAim()
 					applyConfig()
 					lastSaved = r.code
 					saveLocalFile(r.code)
-					setStatus("Your settings are loaded - just like last time", COLORS.slime)
-					showToast("Your aim settings are loaded", COLORS.slime, 3)
+					setStatus("Your settings are loaded - just like last time", COMMON.Green)
+					showToast("Your aim settings are loaded", COMMON.Green, 3)
 				end
 			end
 		end
@@ -3179,7 +3087,7 @@ local function setupAim()
 		if not lastSaved or lastSaved == "" then
 			lastSaved = exportCode()
 			saveNow()
-			setStatus("Your settings are saved and remembered", COLORS.slime)
+			setStatus("Your settings are saved and remembered", COMMON.Green)
 		end
 
 		while true do
@@ -3378,7 +3286,6 @@ local function setupAim()
 		return list
 	end
 
-	-- [[ МОДУЛЬ ОПРЕДЕЛЕНИЯ ОРУЖИЯ v2 (жёстче ищет нож) ]]
 	local WeaponDetector = {}
 	local MELEE_KEYWORDS = {
 		knife = true, blade = true, katana = true, sword = true, dagger = true,
@@ -3431,7 +3338,6 @@ local function setupAim()
 		return nil
 	end
 
-	-- [[ МОДУЛЬ KNIFEAUTO v2 (backstab timing, heavy 1.25s) ]]
 	local KnifeAutoModule = {
 		LastHeavy = 0,
 		Cooldown = 1.25,
@@ -3496,8 +3402,8 @@ local function setupAim()
 		local hl = Instance.new("Highlight")
 		hl.Name = "AimHighlight"
 		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		hl.FillTransparency = 0.65
-		hl.OutlineTransparency = 0
+		hl.FillTransparency = 0.85 -- Отличная видимость скина (не сплошная заливка)
+		hl.OutlineTransparency = 0.05
 		hl.Adornee = char
 		hl.Parent = char
 		o.highlight = hl
@@ -3627,7 +3533,7 @@ local function setupAim()
 	local espRayCache = {}
 
 	local function updateESP(cam, targets)
-		if os.clock() - espLastUpdate < 0.033 then return end -- 30 Гц
+		if os.clock() - espLastUpdate < 0.033 then return end
 		espLastUpdate = os.clock()
 		local seen = {}
 
@@ -3655,20 +3561,36 @@ local function setupAim()
 							visible = isVisible(cam, getAimPart(char) or root, char)
 							espRayCache[cacheKey] = { v = visible, t = now }
 						end
-						local color
+
+						-- УМНЫЕ ЦВЕТА И ОСВЕТЛЕНИЕ ЗА СТЕНАМИ (ТИММЕЙТЫ ЗЕЛЕНЫЕ, ВРАГИ КРАСНЫЕ)
+						local fillColor, outlineColor, fillTrans
 						if mate then
-							color = COLORS.team
-						else
-							if AIM.SmartESPColors then
-								color = visible and Color3.fromRGB(0, 255, 140) or Color3.fromRGB(255, 65, 65)
+							if AIM.SmartESPColors and not visible then
+								fillColor = Color3.fromRGB(170, 255, 195) -- Светло-зеленый за стеной
+								outlineColor = Color3.fromRGB(235, 255, 240)
+								fillTrans = 0.78
 							else
-								color = COLORS.enemy
+								fillColor = Color3.fromRGB(45, 255, 100) -- Яркий зеленый на виду
+								outlineColor = Color3.fromRGB(130, 255, 160)
+								fillTrans = 0.85
+							end
+						else
+							if AIM.SmartESPColors and not visible then
+								fillColor = Color3.fromRGB(255, 165, 165) -- Светло-красный (белее) за стеной
+								outlineColor = Color3.fromRGB(255, 235, 235)
+								fillTrans = 0.78
+							else
+								fillColor = Color3.fromRGB(255, 45, 45) -- Насыщенный красный на виду
+								outlineColor = Color3.fromRGB(255, 120, 120)
+								fillTrans = 0.85
 							end
 						end
 
 						o.highlight.Enabled = AIM.ESPHighlight
-						o.highlight.FillColor = color
-						o.highlight.OutlineColor = (not mate and AIM.SmartESPColors and visible) and Color3.fromRGB(255, 255, 255) or color
+						o.highlight.FillColor = fillColor
+						o.highlight.OutlineColor = outlineColor
+						o.highlight.FillTransparency = fillTrans
+						o.highlight.OutlineTransparency = 0.05
 
 						o.billboard.Adornee = char:FindFirstChild("Head") or root
 						o.billboard.Enabled = AIM.ESPNames or AIM.ESPDistance or AIM.ESPHealth
@@ -3677,7 +3599,7 @@ local function setupAim()
 						local held = (AIM.ESPShowWeapon and aliveHumanoid(char)) and WeaponDetector.GetHeldItem(char)
 						local weaponTag = held and (" [" .. held.Name .. "]") or ""
 						o.name.Text = t.name .. weaponTag
-						o.name.TextColor3 = color
+						o.name.TextColor3 = fillColor
 
 						o.info.Visible = AIM.ESPDistance
 						o.info.Text = trf("%d m", math.floor(dist + 0.5))
@@ -3690,7 +3612,7 @@ local function setupAim()
 						if AIM.ESPTracers then
 							local sp = cam:WorldToViewportPoint(root.Position)
 							if sp.Z > 0 then
-								o.tracer.BackgroundColor3 = color
+								o.tracer.BackgroundColor3 = fillColor
 								drawLine(o.tracer, Vector2.new(vs.X / 2, vs.Y), Vector2.new(sp.X, sp.Y))
 								o.tracer.Visible = true
 							else
@@ -3712,7 +3634,6 @@ local function setupAim()
 	end
 
 	local function getAimCenter(cam)
-		-- FOV circle & aim center ALWAYS locked to screen crosshair center!
 		local vs = cam.ViewportSize
 		return Vector2.new(vs.X / 2, vs.Y / 2), true
 	end
@@ -3767,7 +3688,6 @@ local function setupAim()
 	end
 
 	local lockSeenAt = 0
-
 	local KEEP_RADIUS = 1.5
 	local MIN_GRACE = 0.2
 
@@ -3867,7 +3787,6 @@ local function setupAim()
 
 	local lockedPart, lockedTarget = nil, nil
 	local aimLook = nil
-
 	local SNAP_COS = math.cos(math.rad(0.15))
 	local prevWant, prevChar = nil, nil
 
@@ -3910,43 +3829,6 @@ local function setupAim()
 		freezeMouse(false)
 	end)
 
-	local diagnoseAt, diagnoseText = 0, ""
-	local function diagnose(cam, targets)
-		if os.clock() - diagnoseAt < 0.25 then
-			return diagnoseText
-		end
-		diagnoseAt = os.clock()
-		local vs = cam.ViewportSize
-		local center = Vector2.new(vs.X / 2, vs.Y / 2)
-		local fovScale = getFovScale(cam)
-		local maxFov = AIM.FOV * fovScale
-
-		local mates, outside, walls, shields = 0, 0, 0, 0
-		for _, t in ipairs(targets) do
-			local char = t.char
-			if aliveHumanoid(char) then
-				if AIM.TeamCheck and isTeammate(t.plr) then
-					mates += 1
-				elseif char:FindFirstChildOfClass("ForceField") then
-					shields += 1
-				else
-					local part = getAimPart(char)
-					if part then
-						local sp, onScreen = cam:WorldToViewportPoint(part.Position)
-						if not onScreen or (Vector2.new(sp.X, sp.Y) - center).Magnitude >= maxFov then
-							outside += 1
-						elseif not isVisible(cam, part, char) then
-							walls += 1
-						end
-					end
-				end
-			end
-		end
-		diagnoseText = trf("No target  �  teammates: %d  �  outside circle: %d  �  behind walls: %d  �  shield: %d", mates, outside, walls, shields)
-		return diagnoseText
-	end
-
-	-- [[ МОДУЛЬ ПОВОРОТА ТЕЛА (AlignOrientation) ]]
 	local BodyTurn = { Align = nil, Active = false, Hum = nil, SavedAutoRotate = nil }
 
 	local function ensureBodyAlign()
@@ -4095,8 +3977,8 @@ local function setupAim()
 			local d = myRoot and math.floor((lockedPart.Position - myRoot.Position).Magnitude + 0.5) or 0
 			local enemyWeapon = WeaponDetector.GetHeldItem(lockedTarget.char)
 			local weaponInfo = enemyWeapon and (" [" .. enemyWeapon.Name .. "]") or ""
-			targetInfo.Text = trf("?? %s%s    %d m", lockedTarget.name, weaponInfo, d)
-			targetInfo.TextColor3 = COLORS.enemy
+			targetInfo.Text = trf("🎯 %s%s    %d m", lockedTarget.name, weaponInfo, d)
+			targetInfo.TextColor3 = Color3.fromRGB(255, 45, 45)
 			targetInfo.Visible = true
 		else
 			targetInfo.Visible = false
@@ -4161,7 +4043,6 @@ local function setupAim()
 		local held = WeaponDetector.GetHeldItem(myChar)
 		local targets = getTargets()
 
-		-- [[ KNIFEAUTO: автоматическая активация при взятии ножа ]]
 		if AIM.KnifeAuto and held and held.IsMelee and myRoot then
 			local now = os.clock()
 			if now - KnifeAutoModule.LastHeavy >= KnifeAutoModule.Cooldown then
@@ -4180,7 +4061,6 @@ local function setupAim()
 			end
 		end
 
-		-- [[ 2. АВТОСТРЕЛ: ТОЧНОСТЬ 10°, 0 ЗАДЕРЖКА, БЕЗ ЛИШНИХ ПАУЗ ]]
 		if not autoShootAllowed() then
 			if firing then
 				setTrigger(false)
@@ -4193,7 +4073,6 @@ local function setupAim()
 		local pause = AIM.AutoShootDelay or 0
 		local aimDir = aimRayDirection(cam)
 
-		-- Проверка: залоченная цель или любой враг, на которого направлен прицел
 		local candidates = {}
 		if lockedPart then
 			table.insert(candidates, lockedPart)
@@ -4236,11 +4115,10 @@ local function setupAim()
 		end
 	end)
 
-	-- [[ 3. MOVEMENT & CROUCH SPAM ENGINE ]]
 	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local lastCrouchToggle, crouchDown = 0, false
 
-	RunService.Heartbeat:Connect(function()
+	local moveConn = RunService.Heartbeat:Connect(function()
 		local myChar = player.Character
 		local hum = myChar and aliveHumanoid(myChar)
 		if not hum then
@@ -4251,12 +4129,10 @@ local function setupAim()
 			return
 		end
 
-		-- A) BUNNYHOP: непрерывные прыжки при движении на полной скорости
 		if AIM.BunnyHop and hum.MoveDirection.Magnitude > 0.05 and hum.FloorMaterial ~= Enum.Material.Air then
 			hum.Jump = true
 		end
 
-		-- B) CROUCH SPAM: быстрые приседания во время стрельбы (уклонение от хедшотов)
 		local isShooting = firing or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 		if AIM.CrouchSpam and isShooting then
 			local now = os.clock()
@@ -4276,10 +4152,20 @@ local function setupAim()
 			end
 		end
 	end)
+	
+	gui.Destroying:Connect(function()
+		pcall(function() RunService:UnbindFromRenderStep("AimMain") end)
+		pcall(function() RunService:UnbindFromRenderStep("AimCameraOverride") end)
+		pcall(function() RunService:UnbindFromRenderStep("AimAutoShoot") end)
+		if moveConn then moveConn:Disconnect() end
+		if hud then hud:Destroy() end
+		if espFolder then espFolder:Destroy() end
+	end)
 end
+
 local aimOk, aimErr = pcall(setupAim)
 if not aimOk then
-	warn("[RIVALS MODDED] setupAim ERROR: " .. tostring(aimErr))
+	warn("[SNOW HUB] setupAim ERROR: " .. tostring(aimErr))
 	if game:GetService("StarterGui") then
 		game:GetService("StarterGui"):SetCore("SendNotification", {
 			Title = "AIM ERROR",
@@ -4571,7 +4457,7 @@ end)
 closeButton.MouseButton1Click:Connect(function()
 	resetCloseButton()
 	setMenuVisible(false)
-	notify("Menu hidden", trf("Press %s or the W button on the left", CONFIG.ToggleKey.Name), 4)
+	notify("Menu hidden", trf("Press %s or the ❄ button on the left", CONFIG.ToggleKey.Name), 4)
 end)
 
 profileCard.MouseButton1Click:Connect(function()
@@ -4603,7 +4489,6 @@ do
 	end
 
 	local function placeDock(point)
-		-- No clamp/barrier: free drag anywhere (mobile users can hide the button during combat)
 		openDock.Position = UDim2.fromOffset(point.X, point.Y)
 	end
 
@@ -4695,7 +4580,6 @@ camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitToScreen)
 
 local clock = 0
 RunService.RenderStepped:Connect(function(dt)
-	-- OPTIMIZATION: Do not process UI animations when menu is closed!
 	if not menuVisible then return end
 
 	clock = clock + dt
@@ -4711,9 +4595,6 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	logoEmoji.Position = UDim2.new(0.5, 0, 0.5, math.sin(clock * 2.2) * 2)
 	versionGlow.Transparency = 0.55 + math.sin(clock * 3) * 0.3
-	for _, swing in ipairs(swingers) do
-		swing.Object.Rotation = swing.Base + math.sin(clock * swing.Speed) * swing.Amount
-	end
 end)
 
 task.spawn(function()
@@ -4758,7 +4639,5 @@ task.spawn(function()
 	end
 end)
 
--- [[ ИНИЦИАЛИЗАЦИЯ / INITIALIZATION ]]
--- Загрузка завершена без интро, меню закрыто и открывается только по бинду (ПК) или кнопке (телефон)
 introDone = true
 setMenuVisible(false)
