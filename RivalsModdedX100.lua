@@ -59,8 +59,9 @@ local CONFIG = {
 	Subtitle = "Rivals Edition",
 	Logo = "❄",
 	Author = "by " .. player.Name,
-	Version = "v8.0",
+	Version = "v8.1",
 	ToggleKey = Enum.KeyCode.G,
+	HideAllKey = Enum.KeyCode.P, -- Полное скрытие всех кнопок, меню и круга FOV
 	Theme = "Frostbite",
 	AutoThemeDelay = 6,
 	Width = 760,
@@ -173,6 +174,7 @@ local state = {
 	connections = {},
 	notificationsEnabled = true,
 	autoThemeEnabled = false,
+	allHidden = false,
 }
 
 local function trackConn(conn)
@@ -270,6 +272,7 @@ local TEXTS = {
 	["Show Quick Bar"] = { ru = "Показывать мини-панель (Quick Bar)", gd = "Seall Quick Bar", fr = "Afficher Quick Bar" },
 	["Notifications"] = { ru = "Уведомления в углу", gd = "Brathan", fr = "Notifications" },
 	["Show / Hide Menu"] = { ru = "Открыть / Спрятать меню", gd = "Seall / Falaich", fr = "Afficher / Cacher menu" },
+	["Hide All UI (Stealth)"] = { ru = "Скрыть ВСЁ (Стелс на P)", gd = "Falaich a h-uile càil", fr = "Tout cacher (Mode furtif)" },
 	["Profile"] = { ru = "Профиль", gd = "Pròifil", fr = "Profil" },
 	["Your account"] = { ru = "Статистика аккаунта и сессии", gd = "An cunntas agad", fr = "Ton compte" },
 }
@@ -530,7 +533,7 @@ create("UIListLayout", {
 
 local toastCount = 0
 local function notify(title, text, duration)
-	if not state.notificationsEnabled then return end
+	if not state.notificationsEnabled or state.allHidden then return end
 	duration = duration or 3.5
 	toastCount += 1
 
@@ -586,7 +589,7 @@ local function notify(title, text, duration)
 	task.delay(duration, close)
 end
 
--- [[ ГЛАВНОЕ ОКНО SNOW HUB (В СТИЛЕ VENYX ИЗ СКРИНШОТА) ]]
+-- [[ ГЛАВНОЕ ОКНО SNOW HUB ]]
 local holder = create("Frame", {
 	Name = "Holder",
 	AnchorPoint = Vector2.new(0.5, 0.5),
@@ -625,7 +628,6 @@ paint(main, "BackgroundColor3", "Window")
 corner(main, 14)
 accent(stroke(main, 0.15, 1.5), 45, true)
 
--- Фоновая водяная марка снежинки (ImageLabel)
 local bgWatermark = create("ImageLabel", {
 	AnchorPoint = Vector2.new(1, 1),
 	Position = UDim2.new(1, 40, 1, 40),
@@ -638,7 +640,6 @@ local bgWatermark = create("ImageLabel", {
 })
 paint(bgWatermark, "ImageColor3", "Accent")
 
--- Анимация новогоднего снегопада на фоне меню
 local snowLayer = create("Frame", {
 	Name = "SnowLayer",
 	Size = UDim2.fromScale(1, 1),
@@ -680,7 +681,7 @@ state.freeMouse = create("TextButton", {
 	Parent = main,
 })
 
--- [[ ВЕРХНЯЯ ПАНЕЛЬ (ШАПКА В СТИЛЕ VENYX: ЛОГО / СТАТУС / ПОИСК / СВЕРНУТЬ) ]]
+-- [[ ВЕРХНЯЯ ПАНЕЛЬ ]]
 local topBar = create("Frame", {
 	Name = "TopBar",
 	Size = UDim2.new(1, 0, 0, TOP),
@@ -778,14 +779,13 @@ padding(statusPill, 0, 9, 0, 9)
 local statusLabel = label({
 	Size = UDim2.fromScale(0, 1),
 	AutomaticSize = Enum.AutomaticSize.X,
-	Text = "● Idle",
+	Text = "● Active",
 	Font = FONT_BOLD,
 	TextSize = 11,
 	TextColor3 = COMMON.Green,
 	Parent = statusPill,
 })
 
--- Поле поиска прямо в верхней шапке (как на скриншоте Venyx)
 local searchFrame = create("Frame", {
 	AnchorPoint = Vector2.new(1, 0.5),
 	Position = UDim2.new(1, -92, 0.5, 0),
@@ -881,7 +881,7 @@ create("Frame", {
 	Parent = main,
 })
 
--- [[ ОСНОВНОЙ КОНТЕЙНЕР: УЗКАЯ ПАНЕЛЬ ИКОНОК СЛЕВА + ДВУХКОЛОНОЧНЫЙ КОНТЕНТ ]]
+-- [[ ОСНОВНОЙ КОНТЕЙНЕР ]]
 local body = create("Frame", {
 	Name = "Body",
 	Position = UDim2.fromOffset(0, TOP),
@@ -923,7 +923,6 @@ create("UIListLayout", {
 	Parent = tabButtons,
 })
 
--- Круглая аватарка игрока в самом низу сайдбара (как в Venyx)
 local profileQuickBtn = create("TextButton", {
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.new(0.5, 0, 1, -12),
@@ -972,9 +971,6 @@ local function refreshTabs(duration)
 		})
 		tween(tab.Stroke, duration, { Transparency = active and 0.15 or 1 })
 		tween(tab.Indicator, duration, { Size = active and UDim2.fromOffset(3, 20) or UDim2.fromOffset(3, 0) })
-		if tab.Image then
-			tween(tab.Image, duration, { ImageColor3 = active and THEME.Accent or COMMON.SubText })
-		end
 		tween(tab.Emoji, duration, { TextColor3 = active and THEME.Accent or COMMON.SubText })
 	end
 end
@@ -992,7 +988,6 @@ local function selectTab(tab)
 	tab.Page.CanvasPosition = Vector2.new(0, 0)
 end
 
--- Создание вкладки с поддержкой двух колонок (LeftCol / RightCol)
 local function createTab(name, iconEmoji, assetId, subtitle)
 	local button = create("TextButton", {
 		Name = name,
@@ -1044,7 +1039,6 @@ local function createTab(name, iconEmoji, assetId, subtitle)
 	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page })
 	padding(page, 2, 8, 14, 2)
 
-	-- Шапка вкладки
 	local header = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 44),
 		BackgroundTransparency = 1,
@@ -1068,7 +1062,6 @@ local function createTab(name, iconEmoji, assetId, subtitle)
 		Parent = header,
 	})
 
-	-- Двухколоночная сетка в стиле Venyx
 	local columnsFrame = create("Frame", {
 		Name = "Columns",
 		Size = UDim2.new(1, 0, 0, 0),
@@ -1118,7 +1111,6 @@ local function createTab(name, iconEmoji, assetId, subtitle)
 	return page, tab, leftCol, rightCol
 end
 
--- Групповой заголовок внутри колонки (как AUTO STEAL / FILTER на скрине)
 local function section(parentCol, title)
 	local row = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 26),
@@ -1469,7 +1461,6 @@ local function keybind(parentCol, title, configKey, onChanged)
 	end)
 end
 
--- Поиск по карточкам внутри вкладок
 local function applySearch()
 	local q = string.lower(searchBox.Text)
 	clearButton.Visible = q ~= ""
@@ -1489,7 +1480,7 @@ local menuVisible = false
 local minimized = false
 
 local function updateBlur()
-	local target = (CONFIG.Blur and menuVisible and not minimized) and CONFIG.BlurSize or 0
+	local target = (CONFIG.Blur and menuVisible and not minimized and not state.allHidden) and CONFIG.BlurSize or 0
 	tween(blur, 0.35, { Size = target })
 end
 
@@ -1528,6 +1519,9 @@ round(openButton)
 accent(stroke(openButton, 0, 2), 0, true)
 
 local function setMenuVisible(visible)
+	if state.allHidden then
+		visible = false
+	end
 	if menuVisible == visible then return end
 	menuVisible = visible
 	state.freeMouse.Visible = visible
@@ -1548,7 +1542,7 @@ local function setMenuVisible(visible)
 	updateBlur()
 end
 
--- [[ 1. ВКЛАДКА HOME (ГЛАВНАЯ) ]]
+-- [[ 1. ВКЛАДКА HOME ]]
 local homePage, _, homeLeft, homeRight = createTab("Home", "❄", ASSETS.Home, "Welcome!")
 
 local function newYearCountdown()
@@ -1560,8 +1554,8 @@ local function newYearCountdown()
 end
 
 section(homeLeft, "SNOW HUB WINTER")
-paragraph(homeLeft, trf("Hello, %s!", player.Name), "Добро пожаловать в новогодний Snow Hub v8.0! Меню переработано в удобный двухколоночный интерфейс с плавающим виджетом Quick Bar.")
-paragraph(homeLeft, "How to use", "Нажми G или кнопку ❄ слева для открытия меню. Справа сверху расположена панель быстрого доступа Quick Bar — её можно двигать пальцем или мышкой.")
+paragraph(homeLeft, trf("Hello, %s!", player.Name), "Добро пожаловать в новогодний Snow Hub v8.1! Нажми P (англ.), чтобы полностью скрыть абсолютно все кнопки, меню и круг FOV — при этом аимбот на ПКМ продолжит работать.")
+paragraph(homeLeft, "How to use", "G или кнопка ❄ — меню | P — полностью спрятать/вернуть весь интерфейс (Стелс-режим) | Зажатая ПКМ — работа аимбота.")
 
 section(homeRight, "STATUS")
 paragraph(homeRight, "until New Year", newYearCountdown())
@@ -1570,7 +1564,7 @@ onTheme(function()
 	themeStatLabel.Text = THEME.Name
 end)
 
--- [[ 2. МОДУЛЬ AIM, ESP И ПЛАВАЮЩИЙ QUICK BAR (КАК НА СКРИНШОТЕ VENYX) ]]
+-- [[ 2. МОДУЛЬ AIM, ESP И СТEЛС-РЕЖИМА НА КНОПКУ P ]]
 local function setupAim()
 	local AIM = {
 		GamePassId = 0,
@@ -1631,13 +1625,12 @@ local function setupAim()
 	}
 	local DEFAULTS = table.clone(AIM)
 
-	-- ИСПРАВЛЕНИЕ БАГА #1: Объявляем локальные переменные прицела ДО обработчиков ввода!
 	local lockedPart, lockedTarget = nil, nil
 	local aimLook = nil
 	local prevWant, prevChar = nil, nil
 	local releaseBody = function() end
 	local freezeMouse = function() end
-	local enabled = false
+	local enabled = true -- Включен по умолчанию, чтобы сразу работал по ПКМ
 	local holding = false
 	local hasPass = true
 
@@ -1653,7 +1646,6 @@ local function setupAim()
 		return isMobile or (playerGui:FindFirstChild("TouchGui") ~= nil)
 	end
 
-	-- Поверхность HUD и папка ESP внутри основного контроля очистки
 	local hud = create("ScreenGui", {
 		Name = "AimHud",
 		ResetOnSpawn = false,
@@ -1696,7 +1688,7 @@ local function setupAim()
 	corner(targetInfo, 13)
 	stroke(targetInfo, 0.3, 1, THEME.Accent)
 
-	-- [[ ПЛАВАЮЩАЯ ПАНЕЛЬ QUICK BAR (КАК В ПРАВОМ ВЕРХНЕМ УГЛУ НА СКРИНШОТЕ VENYX) ]]
+	-- [[ ПЛАВАЮЩАЯ ПАНЕЛЬ QUICK BAR ]]
 	local quickBar = create("Frame", {
 		Name = "QuickBar",
 		AnchorPoint = Vector2.new(1, 0),
@@ -1758,7 +1750,6 @@ local function setupAim()
 		tween(quickBar, 0.25, { Size = qbCollapsed and UDim2.fromOffset(195, 28) or UDim2.fromOffset(195, 132) })
 	end)
 
-	-- Перетаскивание Quick Bar пальцем или мышью
 	do
 		local draggingQB = false
 		local dragStartQB, startPosQB
@@ -1793,6 +1784,16 @@ local function setupAim()
 	end
 
 	local onSettingsChanged = function() end
+	local espObjects = {}
+
+	local function destroyESP(char)
+		local o = espObjects[char]
+		if not o then return end
+		pcall(function() o.highlight:Destroy() end)
+		pcall(function() o.billboard:Destroy() end)
+		pcall(function() o.tracer:Destroy() end)
+		espObjects[char] = nil
+	end
 
 	local function updateAutoRotate()
 		local myChar = player.Character
@@ -1806,12 +1807,36 @@ local function setupAim()
 	end
 
 	local function updateUI()
-		circle.Visible = AIM.ShowFOV and hasPass and enabled
-		quickBar.Visible = AIM.ShowQuickBar
+		local showHud = not state.allHidden
+		gui.Enabled = showHud
+		hud.Enabled = showHud
+		openDock.Visible = showHud
+		circle.Visible = showHud and AIM.ShowFOV and hasPass and enabled
+		quickBar.Visible = showHud and AIM.ShowQuickBar
+		if not showHud then
+			targetInfo.Visible = false
+		end
 		statusLabel.Text = enabled and "● Active" or "● Idle"
 		statusLabel.TextColor3 = enabled and COMMON.Green or COMMON.SubText
 		refreshAll()
 		onSettingsChanged()
+	end
+
+	-- Функция полного скрытия всего интерфейса по клавише P
+	function state.setStealth(hide)
+		state.allHidden = hide == true
+		if state.allHidden then
+			menuVisible = false
+			holder.Visible = false
+			popScale.Scale = 0
+			state.freeMouse.Visible = false
+			blur.Size = 0
+			for char in pairs(espObjects) do
+				destroyESP(char)
+			end
+		end
+		updateUI()
+		updateBlur()
 	end
 
 	local function applyConfig()
@@ -1877,7 +1902,6 @@ local function setupAim()
 		applyConfig()
 	end)
 
-	-- Хелперы для привязки контролов к двухколоночным вкладкам
 	local function getValue(key)
 		if key == "enabled" then return enabled end
 		return AIM[key]
@@ -1965,7 +1989,7 @@ local function setupAim()
 		sync()
 	end
 
-	-- [[ 2. ВКЛАДКА AIM (ДВЕ КОЛОНКИ КАК НА СКРИНШОТЕ VENYX) ]]
+	-- [[ ВКЛАДКА AIM ]]
 	local _, _, aimLeft, aimRight = createTab("Aim", "◎", ASSETS.Aim, "Aim assist and auto-shoot")
 
 	section(aimLeft, "Main")
@@ -2015,7 +2039,7 @@ local function setupAim()
 	aimToggle(aimRight, "Show FOV Circle", "Показывать круг радиуса FOV", "ShowFOV")
 	aimToggle(aimRight, "Show Target", "Плашка цели вверху экрана", "ShowTargetInfo")
 
-	-- [[ 3. ВКЛАДКА ESP (ДВЕ КОЛОНКИ: ВИЗУАЛ СКИНОВ И ИНФОРМАЦИЯ) ]]
+	-- [[ ВКЛАДКА ESP ]]
 	local _, _, espLeft, espRight = createTab("ESP", "◇", ASSETS.ESP, "See where players are")
 
 	section(espLeft, "HIGHLIGHT & COLORS")
@@ -2090,14 +2114,22 @@ local function setupAim()
 
 	applyConfig()
 
-	-- [[ ОБРАБОТКА ВВОДА (С ПРАВИЛЬНЫМ СБРОСОМ ЗАХВАТА) ]]
+	-- [[ ОБРАБОТКА ВВОДА ]]
 	trackConn(UserInputService.InputBegan:Connect(function(input, processed)
 		if input.UserInputType == AIM.AimHoldButton and not menuVisible then
 			holding = true
 			return
 		end
-		if processed or bindingKey then return end
+		if bindingKey or UserInputService:GetFocusedTextBox() then return end
+
 		local key = input.KeyCode
+		-- Нажатие P (HideAllKey) работает всегда, кроме ввода текста в чат/поиск
+		if key == CONFIG.HideAllKey then
+			state.setStealth(not state.allHidden)
+			return
+		end
+
+		if processed or state.allHidden then return end
 		if key == AIM.ToggleKey then
 			enabled = not enabled
 			updateAutoRotate()
@@ -2198,7 +2230,6 @@ local function setupAim()
 		return list
 	end
 
-	-- [[ ОПРЕДЕЛЕНИЕ ОРУЖИЯ И НОЖА ]]
 	local WeaponDetector = {}
 	local MELEE_KEYWORDS = {
 		knife = true, blade = true, katana = true, sword = true, dagger = true,
@@ -2231,7 +2262,6 @@ local function setupAim()
 		return nil
 	end
 
-	-- ИСПРАВЛЕНИЕ БАГА #2: KnifeAutoModule использует динамический AIM.KnifeAutoRange
 	local KnifeAutoModule = { LastHeavy = 0 }
 	local function isBehindTarget(myRoot, enemyRoot)
 		if not (myRoot and enemyRoot) then return false end
@@ -2266,8 +2296,7 @@ local function setupAim()
 		end
 	end
 
-	-- [[ ESP СИСТЕМА (ПРОЗРАЧНАЯ ЗАЛИВКА ДЛЯ СКИНА + БЕЛЕЕ ЗА СТЕНАМИ) ]]
-	local espObjects = {}
+	-- [[ ESP СИСТЕМА ]]
 	local function createESP(char)
 		local o = {}
 		local hl = Instance.new("Highlight")
@@ -2330,15 +2359,6 @@ local function setupAim()
 		return o
 	end
 
-	local function destroyESP(char)
-		local o = espObjects[char]
-		if not o then return end
-		pcall(function() o.highlight:Destroy() end)
-		pcall(function() o.billboard:Destroy() end)
-		pcall(function() o.tracer:Destroy() end)
-		espObjects[char] = nil
-	end
-
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -2392,6 +2412,12 @@ local function setupAim()
 	local espRayCache = {}
 
 	local function updateESP(cam, targets)
+		if state.allHidden then
+			for char in pairs(espObjects) do
+				destroyESP(char)
+			end
+			return
+		end
 		if os.clock() - espLastUpdate < 0.033 then return end
 		espLastUpdate = os.clock()
 		local seen = {}
@@ -2668,7 +2694,10 @@ local function setupAim()
 		updateESP(cam, targets)
 
 		local wantAim
-		if isMobileDevice() then
+		if state.allHidden then
+			-- В стелс-режиме (после нажатия P) аимбот всегда работает строго по зажатию ПКМ
+			wantAim = hasPass and aliveHumanoid(player.Character) ~= nil and isRmbDown()
+		elseif isMobileDevice() then
 			wantAim = hasPass and enabled and not menuVisible and aliveHumanoid(player.Character) ~= nil
 		else
 			local myHeld = WeaponDetector.GetHeldItem(player.Character)
@@ -2700,7 +2729,7 @@ local function setupAim()
 
 		freezeMouse(AIM.FreezeMouse)
 
-		if AIM.ShowTargetInfo then
+		if AIM.ShowTargetInfo and not state.allHidden then
 			local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			local d = myRoot and math.floor((lockedPart.Position - myRoot.Position).Magnitude + 0.5) or 0
 			local enemyWeapon = WeaponDetector.GetHeldItem(lockedTarget.char)
@@ -2767,7 +2796,7 @@ local function setupAim()
 		local shouldFire = false
 		local aimDir = cam.CFrame.LookVector
 		local candidates = lockedPart and { lockedPart } or {}
-		if not lockedPart then
+		if not lockedPart and not state.allHidden then
 			for _, t in ipairs(targets) do
 				local char = t.char
 				if char and aliveHumanoid(char) and not char:FindFirstChildOfClass("ForceField") and not (AIM.TeamCheck and isTeammate(t.plr)) then
@@ -2800,7 +2829,6 @@ local function setupAim()
 		end
 	end)
 
-	-- ИСПРАВЛЕНИЕ БАГА #3: CrouchSpam не срабатывает при кликах внутри открытого меню
 	local lastCrouchToggle, crouchDown = 0, false
 	trackConn(RunService.Heartbeat:Connect(function()
 		local myChar = player.Character
@@ -2843,7 +2871,7 @@ local function setupAim()
 end
 pcall(setupAim)
 
--- [[ 4. ВКЛАДКА THEMES (НОВОГОДНИЕ ТЕМЫ) ]]
+-- [[ 4. ВКЛАДКА THEMES ]]
 local _, _, themesLeft, themesRight = createTab("Themes", "◆", ASSETS.Themes, "Change the look of the menu")
 section(themesLeft, "Choose a theme")
 section(themesRight, "Extra")
@@ -2903,7 +2931,7 @@ task.spawn(function()
 	end
 end)
 
--- [[ 5. ВКЛАДКА SETTINGS (НАСТРОЙКИ) ]]
+-- [[ 5. ВКЛАДКА SETTINGS ]]
 local _, _, setLeft, setRight = createTab("Settings", "⚙", ASSETS.Settings, "Menu look and keys")
 
 section(setLeft, "Menu")
@@ -2944,8 +2972,11 @@ section(setRight, "Keybinds")
 keybind(setRight, "Show / Hide Menu", "ToggleKey", function(k)
 	notify("Key changed", k.Name, 2.5)
 end)
+keybind(setRight, "Hide All UI (Stealth)", "HideAllKey", function(k)
+	notify("Key changed", k.Name, 2.5)
+end)
 
--- [[ 6. ВКЛАДКА PROFILE (ПРОФИЛЬ) ]]
+-- [[ 6. ВКЛАДКА PROFILE ]]
 local _, profileTab, profLeft, profRight = createTab("Profile", "●", ASSETS.Home, "Your account")
 section(profLeft, "USER")
 paragraph(profLeft, player.DisplayName, "@" .. player.Name .. "  •  ID: " .. player.UserId)
@@ -2958,7 +2989,7 @@ profileQuickBtn.MouseButton1Click:Connect(function()
 	selectTab(profileTab)
 end)
 
-selectTab(tabs[2]) -- Сразу открываем вкладку Aim для удобства
+selectTab(tabs[2])
 
 minimizeButton.MouseButton1Click:Connect(function()
 	minimized = not minimized
@@ -2971,7 +3002,6 @@ closeButton.MouseButton1Click:Connect(function()
 	setMenuVisible(false)
 end)
 
--- Перетаскивание круглой кнопки ❄
 do
 	local pressing, moved = false, false
 	local pressStart, dockStart
@@ -3002,7 +3032,6 @@ do
 	end)
 end
 
--- Перетаскивание главного окна за верхнюю панель
 do
 	local dragging = false
 	local dragStart, startPos
@@ -3025,16 +3054,15 @@ do
 end
 
 trackConn(UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed or bindingKey then return end
+	if gameProcessed or bindingKey or state.allHidden then return end
 	if input.KeyCode == CONFIG.ToggleKey then
 		setMenuVisible(not menuVisible)
 	end
 end))
 
--- Анимация рамки и падающего снега внутри меню
 local clock = 0
 trackConn(RunService.RenderStepped:Connect(function(dt)
-	if not menuVisible then return end
+	if not menuVisible or state.allHidden then return end
 	clock += dt
 	if CONFIG.AnimatedBorder then
 		for _, gradient in ipairs(spinningGradients) do
